@@ -1,4 +1,6 @@
+using System.ComponentModel.DataAnnotations;
 using ProductManagement.Features.Data.Model;
+using ProductManagement.Features.Helpers;
 using ProductManagement.Features.Helpers.Exceptions;
 using ProductManagement.Features.Repositories.Interfaces;
 using ProductManagement.Features.Services.Interfaces;
@@ -44,6 +46,8 @@ namespace ProductManagement.Features.Services.Implementations
 
         public async Task<Product> CreateProductAsync(Product product)
         {
+            await ValidateProductAsync(product);
+
             try
             {
                 product.CreatedAt = DateTime.UtcNow;
@@ -59,6 +63,8 @@ namespace ProductManagement.Features.Services.Implementations
 
         public async Task<Product> UpdateProductAsync(Product product)
         {
+            await ValidateProductAsync(product);
+
             try
             {
                 product.UpdatedAt = DateTime.UtcNow;
@@ -88,6 +94,41 @@ namespace ProductManagement.Features.Services.Implementations
                 _logger.LogError(ex, "Failed to delete product with id {ProductId}", id);
                 throw new ServiceException($"Failed to delete product with id {id}", ex);
             }
+        }
+
+        private static void ValidateProduct(Product product)
+        {
+            ArgumentNullException.ThrowIfNull(product);
+
+            ValidationHelper.ValidateRequiredString(product.Name, "Product name");
+            ValidationHelper.ValidateRequiredString(product.SKU, "SKU");
+
+            if (product.Price < 0)
+                throw new ValidationException("Price cannot be negative");
+
+            if (product.Cost < 0)
+                throw new ValidationException("Cost cannot be negative");
+
+            if (product.Quantity < 0)
+                throw new ValidationException("Quantity cannot be negative");
+
+            if (product.BrandId <= 0)
+                throw new ValidationException("Brand is required");
+
+            if (product.CategoryId <= 0)
+                throw new ValidationException("Category is required");
+
+            if (product.SupplierId <= 0)
+                throw new ValidationException("Supplier is required");
+        }
+
+        private async Task ValidateProductAsync(Product product)
+        {
+            ValidateProduct(product);
+
+            var existing = await _repository.GetBySkuAsync(product.SKU);
+            if (existing != null && existing.Id != product.Id)
+                throw new ValidationException($"A product with SKU '{product.SKU}' already exists");
         }
     }
 }
