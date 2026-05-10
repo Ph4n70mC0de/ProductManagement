@@ -1,4 +1,6 @@
+using System.ComponentModel.DataAnnotations;
 using ProductManagement.Features.Data.Model;
+using ProductManagement.Features.Helpers;
 using ProductManagement.Features.Helpers.Exceptions;
 using ProductManagement.Features.Repositories.Interfaces;
 using ProductManagement.Features.Services.Interfaces;
@@ -70,6 +72,9 @@ namespace ProductManagement.Features.Services.Implementations
 
         public async Task<Category> CreateCategoryAsync(Category category)
         {
+            ValidateCategory(category);
+            await ValidateCategoryHierarchyAsync(category);
+
             try
             {
                 category.CreatedAt = DateTime.UtcNow;
@@ -85,6 +90,9 @@ namespace ProductManagement.Features.Services.Implementations
 
         public async Task<Category> UpdateCategoryAsync(Category category)
         {
+            ValidateCategory(category);
+            await ValidateCategoryHierarchyAsync(category);
+
             try
             {
                 category.UpdatedAt = DateTime.UtcNow;
@@ -114,6 +122,25 @@ namespace ProductManagement.Features.Services.Implementations
                 _logger.LogError(ex, "Failed to delete category with id {CategoryId}", id);
                 throw new ServiceException($"Failed to delete category with id {id}", ex);
             }
+        }
+
+        private static void ValidateCategory(Category category)
+        {
+            ArgumentNullException.ThrowIfNull(category);
+            ValidationHelper.ValidateRequiredString(category.Name, "Category name");
+
+            if (category.ParentCategoryId.HasValue && category.ParentCategoryId.Value == category.Id)
+                throw new ValidationException("A category cannot be its own parent");
+        }
+
+        private async Task ValidateCategoryHierarchyAsync(Category category)
+        {
+            if (!category.ParentCategoryId.HasValue)
+                return;
+
+            var ancestorIds = await _repository.GetAncestorCategoryIdsAsync(category.ParentCategoryId.Value);
+            if (ancestorIds.Contains(category.Id))
+                throw new ValidationException("A category cannot be an ancestor of itself (circular reference detected)");
         }
     }
 }
