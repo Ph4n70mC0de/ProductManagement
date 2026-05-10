@@ -1,4 +1,5 @@
 using ProductManagement.Features.Data.Model;
+using ProductManagement.Features.Helpers;
 using ProductManagement.Features.Helpers.Exceptions;
 using ProductManagement.Features.Repositories.Interfaces;
 using ProductManagement.Features.Services.Interfaces;
@@ -44,6 +45,8 @@ namespace ProductManagement.Features.Services.Implementations
 
         public async Task<Brand> CreateBrandAsync(Brand brand)
         {
+            ValidateBrand(brand);
+
             try
             {
                 brand.CreatedAt = DateTime.UtcNow;
@@ -59,6 +62,8 @@ namespace ProductManagement.Features.Services.Implementations
 
         public async Task<Brand> UpdateBrandAsync(Brand brand)
         {
+            ValidateBrand(brand);
+
             try
             {
                 brand.UpdatedAt = DateTime.UtcNow;
@@ -88,6 +93,12 @@ namespace ProductManagement.Features.Services.Implementations
                 _logger.LogError(ex, "Failed to delete brand with id {BrandId}", id);
                 throw new ServiceException($"Failed to delete brand with id {id}", ex);
             }
+        }
+
+        private static void ValidateBrand(Brand brand)
+        {
+            ArgumentNullException.ThrowIfNull(brand);
+            ValidationHelper.ValidateRequiredString(brand.Name, "Brand name");
         }
     }
 }
