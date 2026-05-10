@@ -1,0 +1,167 @@
+@page "/suppliers"
+@inject ISupplierService SupplierService
+@using ProductManagement.Features.Data.Model
+
+<PageTitle>Suppliers</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h4" GutterBottom="true">Suppliers</MudText>
+    
+    <MudTable T="Supplier" Items="@SupplierList" Hover="true">
+        <HeaderContent>
+            <MudTh>Name</MudTh>
+            <MudTh>Contact Person</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Phone</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Name">@context.Name</MudTd>
+            <MudTd DataLabel="Contact Person">@context.ContactPerson</MudTd>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+            <MudTd DataLabel="Phone">@context.Phone</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
+                    @(context.IsActive ? "Active" : "Inactive")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditDialog(context)" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+<MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
+        Style="position: fixed; bottom: 16px; right: 16px;" />
+
+<MudDialog @bind-Visible="_createDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Create Supplier</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_newSupplier.Name" Label="Name" Required="true" />
+        <MudTextField @bind-Value="_newSupplier.ContactPerson" Label="Contact Person" Required="true" />
+        <MudTextField @bind-Value="_newSupplier.Email" Label="Email" Required="true" />
+        <MudTextField @bind-Value="_newSupplier.Phone" Label="Phone" />
+        <MudTextField @bind-Value="_newSupplier.Address" Label="Address" Lines="2" />
+        <MudCheckBox @bind-Value="_newSupplier.IsActive" Label="Active" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCreateDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="CreateSupplier">Create</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_editDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Edit Supplier</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_editingSupplier.Name" Label="Name" Required="true" />
+        <MudTextField @bind-Value="_editingSupplier.ContactPerson" Label="Contact Person" Required="true" />
+        <MudTextField @bind-Value="_editingSupplier.Email" Label="Email" Required="true" />
+        <MudTextField @bind-Value="_editingSupplier.Phone" Label="Phone" />
+        <MudTextField @bind-Value="_editingSupplier.Address" Label="Address" Lines="2" />
+        <MudCheckBox @bind-Value="_editingSupplier.IsActive" Label="Active" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseEditDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="UpdateSupplier">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_deleteDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete Supplier</MudText>
+    </TitleContent>
+    <DialogContent>
+        Are you sure you want to delete "@_supplierToDelete?.Name"?
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDeleteDialog">Cancel</MudButton>
+        <MudButton Color="Color.Error" OnClick="DeleteSupplier">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private IEnumerable<Supplier> SupplierList = new List<Supplier>();
+    
+    private bool _createDialogVisible;
+    private bool _editDialogVisible;
+    private bool _deleteDialogVisible;
+    
+    private Supplier _newSupplier = new();
+    private Supplier _editingSupplier = null!;
+    private Supplier? _supplierToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        SupplierList = await SupplierService.GetAllSuppliersAsync();
+    }
+
+    private void OpenCreateDialog()
+    {
+        _newSupplier = new Supplier { CreatedAt = DateTime.UtcNow, IsActive = true };
+        _createDialogVisible = true;
+    }
+
+    private void CloseCreateDialog()
+    {
+        _createDialogVisible = false;
+    }
+
+    private async Task CreateSupplier()
+    {
+        await SupplierService.CreateSupplierAsync(_newSupplier);
+        _createDialogVisible = false;
+        await LoadData();
+    }
+
+    private void OpenEditDialog(Supplier supplier)
+    {
+        _editingSupplier = supplier;
+        _editDialogVisible = true;
+    }
+
+    private void CloseEditDialog()
+    {
+        _editDialogVisible = false;
+    }
+
+    private async Task UpdateSupplier()
+    {
+        await SupplierService.UpdateSupplierAsync(_editingSupplier);
+        _editDialogVisible = false;
+        await LoadData();
+    }
+
+    private void OpenDeleteDialog(Supplier supplier)
+    {
+        _supplierToDelete = supplier;
+        _deleteDialogVisible = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        _deleteDialogVisible = false;
+        _supplierToDelete = null;
+    }
+
+    private async Task DeleteSupplier()
+    {
+        if (_supplierToDelete != null)
+        {
+            await SupplierService.DeleteSupplierAsync(_supplierToDelete.Id);
+            _deleteDialogVisible = false;
+            await LoadData();
+        }
+    }
+}

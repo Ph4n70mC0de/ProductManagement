@@ -1,0 +1,173 @@
+@page "/users"
+@inject IUserService UserService
+@using ProductManagement.Features.Data.Model
+
+<PageTitle>Users</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h4" GutterBottom="true">Users</MudText>
+    
+    <MudTable T="User" Items="@UserList" Hover="true">
+        <HeaderContent>
+            <MudTh>Username</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Created</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Username">@context.Username</MudTd>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
+                    @(context.IsActive ? "Active" : "Inactive")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Created">@context.CreatedAt.ToString("g")</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditDialog(context)" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+<MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
+        Style="position: fixed; bottom: 16px; right: 16px;" />
+
+<MudDialog @bind-Visible="_createDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Create User</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_newUser.Username" Label="Username" Required="true" />
+        <MudTextField @bind-Value="_newUser.Email" Label="Email" Required="true" />
+        <MudTextField @bind-Value="_newUser.PasswordHash" Label="Password" InputType="InputType.Password" Required="true" />
+        <MudCheckBox @bind-Value="_newUser.IsActive" Label="Active" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCreateDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="CreateUser">Create</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_editDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Edit User</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_editingUser.Username" Label="Username" Required="true" />
+        <MudTextField @bind-Value="_editingUser.Email" Label="Email" Required="true" />
+        <MudTextField @bind-Value="_editingUser.PasswordHash" Label="Password (leave blank to keep current)" InputType="InputType.Password" />
+        <MudCheckBox @bind-Value="_editingUser.IsActive" Label="Active" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseEditDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="UpdateUser">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_deleteDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete User</MudText>
+    </TitleContent>
+    <DialogContent>
+        Are you sure you want to delete "@_userToDelete?.Username"?
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDeleteDialog">Cancel</MudButton>
+        <MudButton Color="Color.Error" OnClick="DeleteUser">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private IEnumerable<User> UserList = new List<User>();
+    
+    private bool _createDialogVisible;
+    private bool _editDialogVisible;
+    private bool _deleteDialogVisible;
+    
+    private User _newUser = new();
+    private User _editingUser = null!;
+    private User? _userToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        UserList = await UserService.GetAllUsersAsync();
+    }
+
+    private void OpenCreateDialog()
+    {
+        _newUser = new User { CreatedAt = DateTime.UtcNow, IsActive = true };
+        _createDialogVisible = true;
+    }
+
+    private void CloseCreateDialog()
+    {
+        _createDialogVisible = false;
+    }
+
+    private async Task CreateUser()
+    {
+        _newUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(_newUser.PasswordHash);
+        await UserService.CreateUserAsync(_newUser);
+        _createDialogVisible = false;
+        await LoadData();
+    }
+
+    private void OpenEditDialog(User user)
+    {
+        _editingUser = new User 
+        { 
+            Id = user.Id, 
+            Username = user.Username,
+            Email = user.Email,
+            IsActive = user.IsActive,
+            CreatedAt = user.CreatedAt
+        };
+        _editDialogVisible = true;
+    }
+
+    private void CloseEditDialog()
+    {
+        _editDialogVisible = false;
+    }
+
+    private async Task UpdateUser()
+    {
+        if (!string.IsNullOrWhiteSpace(_editingUser.PasswordHash))
+        {
+            _editingUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(_editingUser.PasswordHash);
+        }
+        await UserService.UpdateUserAsync(_editingUser);
+        _editDialogVisible = false;
+        await LoadData();
+    }
+
+    private void OpenDeleteDialog(User user)
+    {
+        _userToDelete = user;
+        _deleteDialogVisible = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        _deleteDialogVisible = false;
+        _userToDelete = null;
+    }
+
+    private async Task DeleteUser()
+    {
+        if (_userToDelete != null)
+        {
+            await UserService.DeleteUserAsync(_userToDelete.Id);
+            _deleteDialogVisible = false;
+            await LoadData();
+        }
+    }
+}

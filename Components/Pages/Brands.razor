@@ -1,0 +1,157 @@
+@page "/brands"
+@inject IBrandService BrandService
+@using ProductManagement.Features.Data.Model
+
+<PageTitle>Brands</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h4" GutterBottom="true">Brands</MudText>
+    
+    <MudTable T="Brand" Items="@BrandList" Hover="true">
+        <HeaderContent>
+            <MudTh>Name</MudTh>
+            <MudTh>Description</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Name">@context.Name</MudTd>
+            <MudTd DataLabel="Description">@context.Description</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
+                    @(context.IsActive ? "Active" : "Inactive")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditDialog(context)" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+<MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
+        Style="position: fixed; bottom: 16px; right: 16px;" />
+
+<MudDialog @bind-Visible="_createDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Create Brand</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_newBrand.Name" Label="Name" Required="true" />
+        <MudTextField @bind-Value="_newBrand.Description" Label="Description" Lines="3" />
+        <MudCheckBox @bind-Value="_newBrand.IsActive" Label="Active" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCreateDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="CreateBrand">Create</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_editDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Edit Brand</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_editingBrand.Name" Label="Name" Required="true" />
+        <MudTextField @bind-Value="_editingBrand.Description" Label="Description" Lines="3" />
+        <MudCheckBox @bind-Value="_editingBrand.IsActive" Label="Active" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseEditDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="UpdateBrand">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_deleteDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete Brand</MudText>
+    </TitleContent>
+    <DialogContent>
+        Are you sure you want to delete "@_brandToDelete?.Name"?
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDeleteDialog">Cancel</MudButton>
+        <MudButton Color="Color.Error" OnClick="DeleteBrand">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private IEnumerable<Brand> BrandList = new List<Brand>();
+    
+    private bool _createDialogVisible;
+    private bool _editDialogVisible;
+    private bool _deleteDialogVisible;
+    
+    private Brand _newBrand = new();
+    private Brand _editingBrand = null!;
+    private Brand? _brandToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        BrandList = await BrandService.GetAllBrandsAsync();
+    }
+
+    private void OpenCreateDialog()
+    {
+        _newBrand = new Brand { CreatedAt = DateTime.UtcNow, IsActive = true };
+        _createDialogVisible = true;
+    }
+
+    private void CloseCreateDialog()
+    {
+        _createDialogVisible = false;
+    }
+
+    private async Task CreateBrand()
+    {
+        await BrandService.CreateBrandAsync(_newBrand);
+        _createDialogVisible = false;
+        await LoadData();
+    }
+
+    private void OpenEditDialog(Brand brand)
+    {
+        _editingBrand = brand;
+        _editDialogVisible = true;
+    }
+
+    private void CloseEditDialog()
+    {
+        _editDialogVisible = false;
+    }
+
+    private async Task UpdateBrand()
+    {
+        await BrandService.UpdateBrandAsync(_editingBrand);
+        _editDialogVisible = false;
+        await LoadData();
+    }
+
+    private void OpenDeleteDialog(Brand brand)
+    {
+        _brandToDelete = brand;
+        _deleteDialogVisible = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        _deleteDialogVisible = false;
+        _brandToDelete = null;
+    }
+
+    private async Task DeleteBrand()
+    {
+        if (_brandToDelete != null)
+        {
+            await BrandService.DeleteBrandAsync(_brandToDelete.Id);
+            _deleteDialogVisible = false;
+            await LoadData();
+        }
+    }
+}

@@ -1,0 +1,179 @@
+@page "/categories"
+@inject ICategoryService CategoryService
+@using ProductManagement.Features.Data.Model
+
+<PageTitle>Categories</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h4" GutterBottom="true">Categories</MudText>
+    
+    <MudTable T="Category" Items="@CategoryList" Hover="true">
+        <HeaderContent>
+            <MudTh>Name</MudTh>
+            <MudTh>Description</MudTh>
+            <MudTh>Parent Category</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Name">@context.Name</MudTd>
+            <MudTd DataLabel="Description">@context.Description</MudTd>
+            <MudTd DataLabel="Parent">@context.ParentCategory?.Name</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
+                    @(context.IsActive ? "Active" : "Inactive")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditDialog(context)" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+<MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
+        Style="position: fixed; bottom: 16px; right: 16px;" />
+
+<MudDialog @bind-Visible="_createDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Create Category</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_newCategory.Name" Label="Name" Required="true" />
+        <MudTextField @bind-Value="_newCategory.Description" Label="Description" Lines="3" />
+        <MudSelect @bind-Value="_newCategory.ParentCategoryId" Label="Parent Category" Clearable="true">
+            <MudSelectItem Value="0" Disabled="true">None (Root Category)</MudSelectItem>
+            @foreach (var category in RootCategories)
+            {
+                <MudSelectItem Value="category.Id">@category.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudCheckBox @bind-Value="_newCategory.IsActive" Label="Active" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCreateDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="CreateCategory">Create</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_editDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Edit Category</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_editingCategory.Name" Label="Name" Required="true" />
+        <MudTextField @bind-Value="_editingCategory.Description" Label="Description" Lines="3" />
+        <MudSelect @bind-Value="_editingCategory.ParentCategoryId" Label="Parent Category" Clearable="true">
+            <MudSelectItem Value="0">None (Root Category)</MudSelectItem>
+            @foreach (var category in RootCategories.Where(c => c.Id != _editingCategory.Id))
+            {
+                <MudSelectItem Value="category.Id">@category.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudCheckBox @bind-Value="_editingCategory.IsActive" Label="Active" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseEditDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="UpdateCategory">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_deleteDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete Category</MudText>
+    </TitleContent>
+    <DialogContent>
+        Are you sure you want to delete "@_categoryToDelete?.Name"?
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDeleteDialog">Cancel</MudButton>
+        <MudButton Color="Color.Error" OnClick="DeleteCategory">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private IEnumerable<Category> CategoryList = new List<Category>();
+    private IEnumerable<Category> RootCategories = new List<Category>();
+    
+    private bool _createDialogVisible;
+    private bool _editDialogVisible;
+    private bool _deleteDialogVisible;
+    
+    private Category _newCategory = new();
+    private Category _editingCategory = null!;
+    private Category? _categoryToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        CategoryList = await CategoryService.GetAllCategoriesAsync();
+        RootCategories = await CategoryService.GetRootCategoriesAsync();
+    }
+
+    private void OpenCreateDialog()
+    {
+        _newCategory = new Category { CreatedAt = DateTime.UtcNow, IsActive = true };
+        _createDialogVisible = true;
+    }
+
+    private void CloseCreateDialog()
+    {
+        _createDialogVisible = false;
+    }
+
+    private async Task CreateCategory()
+    {
+        if (_newCategory.ParentCategoryId == 0)
+            _newCategory.ParentCategoryId = null;
+        await CategoryService.CreateCategoryAsync(_newCategory);
+        _createDialogVisible = false;
+        await LoadData();
+    }
+
+    private void OpenEditDialog(Category category)
+    {
+        _editingCategory = category;
+        _editDialogVisible = true;
+    }
+
+    private void CloseEditDialog()
+    {
+        _editDialogVisible = false;
+    }
+
+    private async Task UpdateCategory()
+    {
+        if (_editingCategory.ParentCategoryId == 0)
+            _editingCategory.ParentCategoryId = null;
+        await CategoryService.UpdateCategoryAsync(_editingCategory);
+        _editDialogVisible = false;
+        await LoadData();
+    }
+
+    private void OpenDeleteDialog(Category category)
+    {
+        _categoryToDelete = category;
+        _deleteDialogVisible = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        _deleteDialogVisible = false;
+        _categoryToDelete = null;
+    }
+
+    private async Task DeleteCategory()
+    {
+        if (_categoryToDelete != null)
+        {
+            await CategoryService.DeleteCategoryAsync(_categoryToDelete.Id);
+            _deleteDialogVisible = false;
+            await LoadData();
+        }
+    }
+}

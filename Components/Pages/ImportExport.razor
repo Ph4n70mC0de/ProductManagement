@@ -1,0 +1,144 @@
+@page "/import-export"
+@inject IProductService ProductService
+@inject IBrandService BrandService
+@inject ICategoryService CategoryService
+@inject ISupplierService SupplierService
+@inject IDataExportService ExportService
+@using ProductManagement.Features.Data.Model
+@using CsvHelper
+@using System.Globalization
+
+<PageTitle>Import/Export</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h4" GutterBottom="true">Import/Export Data</MudText>
+    
+    <MudTabs Elevation="2" Rounded="true">
+        <MudTabPanel Text="Export">
+            <MudText Typo="Typo.h6" GutterBottom="true">Export Data</MudText>
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportProducts" FullWidth="true" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" /> Export Products (CSV)
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportBrands" FullWidth="true" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" /> Export Brands (CSV)
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportCategories" FullWidth="true" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" /> Export Categories (CSV)
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportSuppliers" FullWidth="true" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" /> Export Suppliers (CSV)
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudTabPanel>
+        
+        <MudTabPanel Text="Import">
+            <MudText Typo="Typo.h6" GutterBottom="true">Import Data</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Default" Class="mb-2">
+                Upload a CSV file with columns: Name, SKU, Description, Price, Cost, Quantity, IsActive
+            </MudText>
+            <InputFile OnChange="HandleFileSelected" accept=".csv" />
+            @if (!string.IsNullOrEmpty(_importMessage))
+            {
+                <MudAlert Severity="@_importSeverity" Class="mt-4">@_importMessage</MudAlert>
+            }
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>
+
+@code {
+    private IEnumerable<Product> ProductList = new List<Product>();
+    private string? _importMessage;
+    private Severity _importSeverity = Severity.Info;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        ProductList = await ProductService.GetAllProductsAsync();
+    }
+
+    private async Task ExportProducts()
+    {
+        var csvBytes = ExportService.ExportProductsToCsv(ProductList);
+        Console.WriteLine($"Exported {csvBytes.Length} bytes to products_export.csv");
+    }
+
+    private async Task ExportBrands()
+    {
+        var brands = await BrandService.GetAllBrandsAsync();
+        var csvBytes = ExportService.ExportBrandsToCsv(brands);
+        Console.WriteLine($"Exported {csvBytes.Length} bytes to brands_export.csv");
+    }
+
+    private async Task ExportCategories()
+    {
+        var categories = await CategoryService.GetAllCategoriesAsync();
+        var csvBytes = ExportService.ExportCategoriesToCsv(categories);
+        Console.WriteLine($"Exported {csvBytes.Length} bytes to categories_export.csv");
+    }
+
+    private async Task ExportSuppliers()
+    {
+        var suppliers = await SupplierService.GetAllSuppliersAsync();
+        var csvBytes = ExportService.ExportSuppliersToCsv(suppliers);
+        Console.WriteLine($"Exported {csvBytes.Length} bytes to suppliers_export.csv");
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+            using var reader = new StreamReader(file.OpenReadStream(1024 * 1024));
+            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+            
+            var records = csv.GetRecords<ProductImportDto>().ToList();
+            var importedCount = 0;
+
+            foreach (var record in records)
+            {
+                var product = new Product
+                {
+                    Name = record.Name,
+                    SKU = record.SKU,
+                    Description = record.Description ?? string.Empty,
+                    Price = record.Price,
+                    Cost = record.Cost,
+                    Quantity = record.Quantity,
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = record.IsActive,
+                    IsDeleted = false
+                };
+                
+                await ProductService.CreateProductAsync(product);
+                importedCount++;
+            }
+
+            _importMessage = $"Successfully imported {importedCount} products.";
+            _importSeverity = Severity.Success;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            _importMessage = $"Error importing products: {ex.Message}";
+            _importSeverity = Severity.Error;
+        }
+    }
+
+    private class ProductImportDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public string SKU { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public decimal Price { get; set; }
+        public decimal Cost { get; set; }
+        public int Quantity { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+}

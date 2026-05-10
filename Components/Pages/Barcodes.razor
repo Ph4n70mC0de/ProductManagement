@@ -1,0 +1,95 @@
+@page "/barcodes"
+@inject IProductService ProductService
+@inject IBrandService BrandService
+@using ProductManagement.Features.Data.Model
+@using ProductManagement.Features.Helpers
+
+<PageTitle>Barcode Generator</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h4" GutterBottom="true">Barcode Generator</MudText>
+    
+    <MudPaper Class="pa-4 mb-4">
+        <MudSelect @bind-Value="_selectedProductId" Label="Select Product" Variant="Variant.Outlined">
+            @foreach (var product in ProductList)
+            {
+                <MudSelectItem Value="product.Id">@product.Name (@product.SKU)</MudSelectItem>
+            }
+        </MudSelect>
+    </MudPaper>
+
+    @if (_selectedProduct != null)
+    {
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Barcode for @_selectedProduct.SKU</MudText>
+            <MudDivider Class="mb-4" />
+            <div Style="text-align: center;">
+                <img src="@GetBarcodeDataUrl(_selectedProduct.SKU)" alt="Barcode" Style="max-width: 100%; height: auto;" />
+                <MudText Typo="Typo.caption" Color="Color.Default" Class="mt-2">@_selectedProduct.SKU</MudText>
+            </div>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="PrintBarcode" Class="mt-4">
+                <MudIcon Icon="@Icons.Material.Filled.Print" Class="mr-2" /> Print Barcode
+            </MudButton>
+        </MudPaper>
+    }
+
+    <MudPaper Elevation="2" Class="pa-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Printable Product Labels</MudText>
+        <MudTable T="Product" Items="ProductList" Dense="true">
+            <HeaderContent>
+                <MudTh>Product</MudTh>
+                <MudTh>SKU</MudTh>
+                <MudTh>Barcode</MudTh>
+                <MudTh>Action</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Product">@context.Name</MudTd>
+                <MudTd DataLabel="SKU">@context.SKU</MudTd>
+                <MudTd DataLabel="Barcode">
+                    <img src="@GetBarcodeDataUrl(context.SKU)" alt="Barcode" Style="height: 40px;" />
+                </MudTd>
+                <MudTd DataLabel="Action">
+                    <MudButton Size="Size.Small" OnClick="() => PrintSingleBarcode(context)">Print</MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private IEnumerable<Product> ProductList = new List<Product>();
+    private int _selectedProductId;
+    private Product? _selectedProduct => ProductList.FirstOrDefault(p => p.Id == _selectedProductId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        if (ProductList.Any())
+        {
+            _selectedProductId = ProductList.First().Id;
+        }
+    }
+
+    private async Task LoadData()
+    {
+        ProductList = await ProductService.GetAllProductsAsync();
+    }
+
+    private string GetBarcodeDataUrl(string sku)
+    {
+        return BarcodeHelper.GenerateBarcodeDataUrl(sku);
+    }
+
+    private async Task PrintBarcode()
+    {
+        if (!string.IsNullOrEmpty(_selectedProduct?.SKU))
+        {
+            // JavaScript print functionality would be implemented here
+        }
+    }
+
+    private async Task PrintSingleBarcode(Product product)
+    {
+        // JavaScript print functionality for single barcode
+    }
+}

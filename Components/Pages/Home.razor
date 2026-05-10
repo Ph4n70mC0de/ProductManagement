@@ -1,0 +1,158 @@
+@page "/"
+@inject IProductService ProductService
+@inject IBrandService BrandService
+@inject ICategoryService CategoryService
+@inject ISupplierService SupplierService
+@inject IUserService UserService
+@using ProductManagement.Features.Data.Model
+
+<PageTitle>Home</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h3" GutterBottom="true">Product Management Dashboard</MudText>
+    
+    <MudGrid Class="mt-4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="3" Class="pa-4" Style="text-align: center; cursor: pointer;" @onclick="NavigateToProducts">
+                <MudBadge BadgeClass="mx-4" Color="Color.Primary" Overlap="true" Bordered="true" 
+                          Content="@LowStockCount.ToString()">
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory" Style="font-size: 48px; color: #1976d2;" />
+                </MudBadge>
+                <MudText Typo="Typo.h6">Products</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Default">@TotalProducts total</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="3" Class="pa-4" Style="text-align: center; cursor: pointer;" @onclick="NavigateToBrands">
+                <MudIcon Icon="@Icons.Material.Filled.BrandingWatermark" Style="font-size: 48px; color: #388e3c;" />
+                <MudText Typo="Typo.h6">Brands</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Default">@TotalBrands total</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="3" Class="pa-4" Style="text-align: center; cursor: pointer;" @onclick="NavigateToCategories">
+                <MudIcon Icon="@Icons.Material.Filled.Category" Style="font-size: 48px; color: #f57c00;" />
+                <MudText Typo="Typo.h6">Categories</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Default">@TotalCategories total</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="3" Class="pa-4" Style="text-align: center; cursor: pointer;" @onclick="NavigateToSuppliers">
+                <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Style="font-size: 48px; color: #7b1fa2;" />
+                <MudText Typo="Typo.h6">Suppliers</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Default">@TotalSuppliers total</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="3" Class="pa-4" Style="text-align: center; cursor: pointer;" @onclick="NavigateToUsers">
+                <MudIcon Icon="@Icons.Material.Filled.Person" Style="font-size: 48px; color: #e91e63;" />
+                <MudText Typo="Typo.h6">Users</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Default">@TotalUsers total</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid Class="mt-6">
+        <MudItem xs="12" md="8">
+            <MudPaper Elevation="2" Class="pa-4">
+                <MudText Typo="Typo.h5" GutterBottom="true">Inventory by Category</MudText>
+                <MudChart T="double" Labels="CategoryLabels" Values="CategoryValues" ChartType="ChartType.Donut" />
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="2" Class="pa-4">
+                <MudText Typo="Typo.h5" GutterBottom="true">Low Stock Alert</MudText>
+                @if (LowStockProducts.Any())
+                {
+                    <MudList T="Product" Dense="true">
+                        @foreach (var product in LowStockProducts.Take(5))
+                        {
+                            <MudListItem>
+                                <MudText>@product.Name</MudText>
+                                <MudChip T="string" Color="Color.Error" Size="Size.Small" Class="ml-2">Stock: @product.Quantity</MudChip>
+                            </MudListItem>
+                        }
+                    </MudList>
+                    @if (LowStockProducts.Count() > 5)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Default">+@(LowStockProducts.Count() - 5) more items</MudText>
+                    }
+                }
+                else
+                {
+                    <MudText Color="Color.Success">All products adequately stocked</MudText>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Elevation="2" Class="pa-4 mt-6">
+        <MudText Typo="Typo.h5" GutterBottom="true">Recent Products</MudText>
+        <MudTable T="Product" Items="RecentProducts" Dense="true">
+            <RowTemplate>
+                <MudTd DataLabel="Name">
+                    <MudText>@context.Name</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">@context.SKU</MudText>
+                </MudTd>
+                <MudTd DataLabel="Price" Style="text-align: right;">
+                    <MudText>@context.Price.ToString("C")</MudText>
+                    <MudChip T="string" Color="@(context.Quantity < 10 ? Color.Error : context.Quantity < 30 ? Color.Warning : Color.Success)" Size="Size.Small">
+                        Stock: @context.Quantity
+                    </MudChip>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private int TotalProducts;
+    private int TotalBrands;
+    private int TotalCategories;
+    private int TotalSuppliers;
+    private int TotalUsers;
+    private int LowStockCount;
+    private IEnumerable<Product> RecentProducts = new List<Product>();
+    private IEnumerable<Product> LowStockProducts = new List<Product>();
+    private string[] CategoryLabels = Array.Empty<string>();
+    private double[] CategoryValues = Array.Empty<double>();
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var products = await ProductService.GetAllProductsAsync();
+        TotalProducts = products.Count();
+        LowStockCount = products.Count(p => p.Quantity < 10);
+        LowStockProducts = products.Where(p => p.Quantity < 10).OrderBy(p => p.Quantity);
+        RecentProducts = products.OrderByDescending(p => p.CreatedAt).Take(5);
+
+        // Category distribution for chart
+        var categoryGroups = products
+            .Where(p => p.Category != null)
+            .GroupBy(p => p.Category!.Name)
+            .OrderByDescending(g => g.Sum(p => p.Quantity))
+            .Take(5);
+
+        CategoryLabels = categoryGroups.Select(g => g.Key).ToArray();
+        CategoryValues = categoryGroups.Select(g => (double)g.Sum(p => p.Quantity)).ToArray();
+
+        var brands = await BrandService.GetAllBrandsAsync();
+        TotalBrands = brands.Count();
+
+        var categories = await CategoryService.GetAllCategoriesAsync();
+        TotalCategories = categories.Count();
+
+        var suppliers = await SupplierService.GetAllSuppliersAsync();
+        TotalSuppliers = suppliers.Count();
+
+        var users = await UserService.GetAllUsersAsync();
+        TotalUsers = users.Count();
+    }
+
+    private void NavigateToProducts() => Navigation.NavigateTo("/products");
+    private void NavigateToBrands() => Navigation.NavigateTo("/brands");
+    private void NavigateToCategories() => Navigation.NavigateTo("/categories");
+    private void NavigateToSuppliers() => Navigation.NavigateTo("/suppliers");
+    private void NavigateToUsers() => Navigation.NavigateTo("/users");
+}

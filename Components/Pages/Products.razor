@@ -1,0 +1,236 @@
+@page "/products"
+@inject IProductService ProductService
+@inject IBrandService BrandService
+@inject ICategoryService CategoryService
+@inject ISupplierService SupplierService
+@using ProductManagement.Features.Data.Model
+
+<PageTitle>Products</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h4" GutterBottom="true">Products</MudText>
+    
+    <MudPaper Class="pa-4 mb-4">
+        <MudTextField @bind-Value="_searchString" Placeholder="Search by name or SKU" 
+                      AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" 
+                      Immediate="true" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+    </MudPaper>
+
+    <MudTable T="Product" Items="@FilteredProducts" Hover="true">
+        <HeaderContent>
+            <MudTh>Image</MudTh>
+            <MudTh>Name</MudTh>
+            <MudTh>SKU</MudTh>
+            <MudTh>Price</MudTh>
+            <MudTh>Quantity</MudTh>
+            <MudTh>Brand</MudTh>
+            <MudTh>Category</MudTh>
+            <MudTh>Supplier</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Image">
+                @if (!string.IsNullOrEmpty(context.ImageUrl))
+                {
+                    <MudAvatar Src="@context.ImageUrl" Size="Size.Small" />
+                }
+            </MudTd>
+            <MudTd DataLabel="Name">@context.Name</MudTd>
+            <MudTd DataLabel="SKU">@context.SKU</MudTd>
+            <MudTd DataLabel="Price">@context.Price.ToString("C")</MudTd>
+            <MudTd DataLabel="Quantity">
+                <MudChip T="string" Color="@(context.Quantity < 10 ? Color.Error : context.Quantity < 30 ? Color.Warning : Color.Success)" 
+                         Size="Size.Small">@context.Quantity</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Brand">@context.Brand?.Name</MudTd>
+            <MudTd DataLabel="Category">@context.Category?.Name</MudTd>
+            <MudTd DataLabel="Supplier">@context.Supplier?.Name</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditDialog(context)" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+<MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
+        Style="position: fixed; bottom: 16px; right: 16px;" />
+
+<MudDialog @bind-Visible="_createDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Create Product</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_newProduct.Name" Label="Name" Required="true" />
+        <MudTextField @bind-Value="_newProduct.SKU" Label="SKU" Required="true" />
+        <MudTextField @bind-Value="_newProduct.ImageUrl" Label="Image URL" />
+        <MudTextField @bind-Value="_newProduct.Description" Label="Description" Lines="3" />
+        <MudNumericField @bind-Value="_newProduct.Price" Label="Price" Required="true" />
+        <MudNumericField @bind-Value="_newProduct.Cost" Label="Cost" />
+        <MudNumericField @bind-Value="_newProduct.Quantity" Label="Quantity" />
+        <MudSelect @bind-Value="_newProduct.BrandId" Label="Brand" Required="true">
+            @foreach (var brand in BrandList)
+            {
+                <MudSelectItem Value="brand.Id">@brand.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect @bind-Value="_newProduct.CategoryId" Label="Category" Required="true">
+            @foreach (var category in CategoryList)
+            {
+                <MudSelectItem Value="category.Id">@category.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect @bind-Value="_newProduct.SupplierId" Label="Supplier" Required="true">
+            @foreach (var supplier in SupplierList)
+            {
+                <MudSelectItem Value="supplier.Id">@supplier.Name</MudSelectItem>
+            }
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCreateDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="CreateProduct">Create</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_editDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Edit Product</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_editingProduct.Name" Label="Name" Required="true" />
+        <MudTextField @bind-Value="_editingProduct.SKU" Label="SKU" Required="true" />
+        <MudTextField @bind-Value="_editingProduct.ImageUrl" Label="Image URL" />
+        <MudTextField @bind-Value="_editingProduct.Description" Label="Description" Lines="3" />
+        <MudNumericField @bind-Value="_editingProduct.Price" Label="Price" Required="true" />
+        <MudNumericField @bind-Value="_editingProduct.Cost" Label="Cost" />
+        <MudNumericField @bind-Value="_editingProduct.Quantity" Label="Quantity" />
+        <MudSelect @bind-Value="_editingProduct.BrandId" Label="Brand" Required="true">
+            @foreach (var brand in BrandList)
+            {
+                <MudSelectItem Value="brand.Id">@brand.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect @bind-Value="_editingProduct.CategoryId" Label="Category" Required="true">
+            @foreach (var category in CategoryList)
+            {
+                <MudSelectItem Value="category.Id">@category.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect @bind-Value="_editingProduct.SupplierId" Label="Supplier" Required="true">
+            @foreach (var supplier in SupplierList)
+            {
+                <MudSelectItem Value="supplier.Id">@supplier.Name</MudSelectItem>
+            }
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseEditDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="UpdateProduct">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_deleteDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete Product</MudText>
+    </TitleContent>
+    <DialogContent>
+        Are you sure you want to delete "@_productToDelete?.Name"?
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDeleteDialog">Cancel</MudButton>
+        <MudButton Color="Color.Error" OnClick="DeleteProduct">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private IEnumerable<Product> ProductList = new List<Product>();
+    private IEnumerable<Brand> BrandList = new List<Brand>();
+    private IEnumerable<Category> CategoryList = new List<Category>();
+    private IEnumerable<Supplier> SupplierList = new List<Supplier>();
+    
+    private string _searchString = "";
+    private IEnumerable<Product> FilteredProducts => string.IsNullOrWhiteSpace(_searchString) 
+        ? ProductList 
+        : ProductList.Where(p => p.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) 
+                             || p.SKU.Contains(_searchString, StringComparison.OrdinalIgnoreCase));
+    
+    private bool _createDialogVisible;
+    private bool _editDialogVisible;
+    private bool _deleteDialogVisible;
+    
+    private Product _newProduct = new();
+    private Product _editingProduct = null!;
+    private Product? _productToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        ProductList = await ProductService.GetAllProductsAsync();
+        BrandList = await BrandService.GetAllBrandsAsync();
+        CategoryList = await CategoryService.GetAllCategoriesAsync();
+        SupplierList = await SupplierService.GetAllSuppliersAsync();
+    }
+
+    private void OpenCreateDialog()
+    {
+        _newProduct = new Product { CreatedAt = DateTime.UtcNow, IsActive = true };
+        _createDialogVisible = true;
+    }
+
+    private void CloseCreateDialog()
+    {
+        _createDialogVisible = false;
+    }
+
+    private async Task CreateProduct()
+    {
+        await ProductService.CreateProductAsync(_newProduct);
+        _createDialogVisible = false;
+        await LoadData();
+    }
+
+    private void OpenEditDialog(Product product)
+    {
+        _editingProduct = product;
+        _editDialogVisible = true;
+    }
+
+    private void CloseEditDialog()
+    {
+        _editDialogVisible = false;
+    }
+
+    private async Task UpdateProduct()
+    {
+        await ProductService.UpdateProductAsync(_editingProduct);
+        _editDialogVisible = false;
+        await LoadData();
+    }
+
+    private void OpenDeleteDialog(Product product)
+    {
+        _productToDelete = product;
+        _deleteDialogVisible = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        _deleteDialogVisible = false;
+        _productToDelete = null;
+    }
+
+    private async Task DeleteProduct()
+    {
+        if (_productToDelete != null)
+        {
+            await ProductService.DeleteProductAsync(_productToDelete.Id);
+            _deleteDialogVisible = false;
+            await LoadData();
+        }
+    }
+}
