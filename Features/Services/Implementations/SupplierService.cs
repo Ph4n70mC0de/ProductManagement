@@ -1,4 +1,5 @@
 using ProductManagement.Features.Data.Model;
+using ProductManagement.Features.Helpers;
 using ProductManagement.Features.Helpers.Exceptions;
 using ProductManagement.Features.Repositories.Interfaces;
 using ProductManagement.Features.Services.Interfaces;
@@ -44,6 +45,8 @@ namespace ProductManagement.Features.Services.Implementations
 
         public async Task<Supplier> CreateSupplierAsync(Supplier supplier)
         {
+            ValidateSupplier(supplier);
+
             try
             {
                 supplier.CreatedAt = DateTime.UtcNow;
@@ -59,6 +62,8 @@ namespace ProductManagement.Features.Services.Implementations
 
         public async Task<Supplier> UpdateSupplierAsync(Supplier supplier)
         {
+            ValidateSupplier(supplier);
+
             try
             {
                 supplier.UpdatedAt = DateTime.UtcNow;
@@ -88,6 +93,17 @@ namespace ProductManagement.Features.Services.Implementations
                 _logger.LogError(ex, "Failed to delete supplier with id {SupplierId}", id);
                 throw new ServiceException($"Failed to delete supplier with id {id}", ex);
             }
+        }
+
+        private static void ValidateSupplier(Supplier supplier)
+        {
+            ArgumentNullException.ThrowIfNull(supplier);
+
+            ValidationHelper.ValidateRequiredString(supplier.Name, "Supplier name");
+            ValidationHelper.ValidateRequiredString(supplier.ContactPerson, "Contact person");
+            ValidationHelper.ValidateEmail(supplier.Email, "Email");
+            ValidationHelper.ValidateRequiredString(supplier.Phone, "Phone");
+            ValidationHelper.ValidateRequiredString(supplier.Address, "Address");
         }
     }
 }
