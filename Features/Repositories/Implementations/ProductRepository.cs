@@ -29,5 +29,11 @@ namespace ProductManagement.Features.Repositories.Implementations
                 .Include(p => p.Supplier)
                 .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
         }
+
+        public async Task<Product?> GetBySkuAsync(string sku)
+        {
+            return await _context.Products
+                .FirstOrDefaultAsync(p => p.SKU == sku && !p.IsDeleted);
+        }
     }
 }
