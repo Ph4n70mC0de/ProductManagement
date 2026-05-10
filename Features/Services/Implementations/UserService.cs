@@ -1,5 +1,5 @@
-using System.ComponentModel.DataAnnotations;
 using ProductManagement.Features.Data.Model;
+using ProductManagement.Features.Helpers;
 using ProductManagement.Features.Helpers.Exceptions;
 using ProductManagement.Features.Repositories.Interfaces;
 using ProductManagement.Features.Services.Interfaces;
@@ -95,35 +95,13 @@ namespace ProductManagement.Features.Services.Implementations
             }
         }
 
-        private void ValidateUser(User user)
+        private static void ValidateUser(User user)
         {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
+            ArgumentNullException.ThrowIfNull(user);
 
-            if (string.IsNullOrWhiteSpace(user.Username))
-                throw new ValidationException("Username is required");
-
-            if (string.IsNullOrWhiteSpace(user.Email))
-                throw new ValidationException("Email is required");
-
-            if (!IsValidEmail(user.Email))
-                throw new ValidationException("Invalid email format");
-
-            if (string.IsNullOrWhiteSpace(user.PasswordHash))
-                throw new ValidationException("Password is required for new users");
-        }
-
-        private bool IsValidEmail(string email)
-        {
-            try
-            {
-                var addr = new System.Net.Mail.MailAddress(email);
-                return addr.Address == email;
-            }
-            catch
-            {
-                return false;
-            }
+            ValidationHelper.ValidateRequiredString(user.Username, "Username");
+            ValidationHelper.ValidateEmail(user.Email, "Email");
+            ValidationHelper.ValidateRequiredString(user.PasswordHash, "Password");
         }
     }
 }
