@@ -6,5 +6,6 @@ namespace ProductManagement.Features.Repositories.Interfaces
     {
         Task<IEnumerable<Product>> GetProductsWithDetailsAsync();
         Task<Product?> GetProductWithDetailsAsync(int id);
+        Task<Product?> GetBySkuAsync(string sku);
     }
 }

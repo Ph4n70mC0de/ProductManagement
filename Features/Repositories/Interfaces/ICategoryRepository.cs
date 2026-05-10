@@ -6,5 +6,6 @@ namespace ProductManagement.Features.Repositories.Interfaces
     {
         Task<IEnumerable<Category>> GetRootCategoriesAsync();
         Task<IEnumerable<Category>> GetSubCategoriesAsync(int parentId);
+        Task<IEnumerable<int>> GetAncestorCategoryIdsAsync(int categoryId);
     }
 }

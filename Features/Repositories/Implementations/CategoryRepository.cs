@@ -31,5 +31,25 @@ namespace ProductManagement.Features.Repositories.Implementations
                 .Where(c => c.ParentCategoryId == parentId && !c.IsDeleted)
                 .ToListAsync();
         }
+
+        public async Task<IEnumerable<int>> GetAncestorCategoryIdsAsync(int categoryId)
+        {
+            var ancestorIds = new List<int>();
+            var current = await _context.Categories
+                .Where(c => c.Id == categoryId)
+                .Select(c => c.ParentCategoryId)
+                .FirstOrDefaultAsync();
+
+            while (current.HasValue)
+            {
+                ancestorIds.Add(current.Value);
+                current = await _context.Categories
+                    .Where(c => c.Id == current.Value)
+                    .Select(c => c.ParentCategoryId)
+                    .FirstOrDefaultAsync();
+            }
+
+            return ancestorIds;
+        }
     }
 }
