@@ -10,10 +10,7 @@ public static class SeedData
         using var context = new AppDbContext(
             serviceProvider.GetRequiredService<DbContextOptions<AppDbContext>>());
 
-        if (context.Database.GetPendingMigrations().Any())
-        {
-            context.Database.Migrate();
-        }
+        context.Database.EnsureCreated();
 
         if (context.Brands.Any(b => !b.IsDeleted)) return;
 
