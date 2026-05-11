@@ -1,1 +1,21 @@
+# .NET Core
+bin/
+obj/
+*.user
+*.suo
+*.sln.docstates
+*.userprefs
+
+# Visual Studio
+.vs/
+*.sln.ide/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Kilo planner
 /.kilo
