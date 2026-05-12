@@ -4,6 +4,7 @@
 @inject ICategoryService CategoryService
 @inject ISupplierService SupplierService
 @inject IDataExportService ExportService
+@inject IJSRuntime JSRuntime
 @using ProductManagement.Features.Data.Model
 @using CsvHelper
 @using System.Globalization
@@ -66,28 +67,32 @@
     private async Task ExportProducts()
     {
         var csvBytes = ExportService.ExportProductsToCsv(ProductList);
-        Console.WriteLine($"Exported {csvBytes.Length} bytes to products_export.csv");
+        var fileName = $"products_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(csvBytes));
     }
 
     private async Task ExportBrands()
     {
         var brands = await BrandService.GetAllBrandsAsync();
         var csvBytes = ExportService.ExportBrandsToCsv(brands);
-        Console.WriteLine($"Exported {csvBytes.Length} bytes to brands_export.csv");
+        var fileName = $"brands_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(csvBytes));
     }
 
     private async Task ExportCategories()
     {
         var categories = await CategoryService.GetAllCategoriesAsync();
         var csvBytes = ExportService.ExportCategoriesToCsv(categories);
-        Console.WriteLine($"Exported {csvBytes.Length} bytes to categories_export.csv");
+        var fileName = $"categories_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(csvBytes));
     }
 
     private async Task ExportSuppliers()
     {
         var suppliers = await SupplierService.GetAllSuppliersAsync();
         var csvBytes = ExportService.ExportSuppliersToCsv(suppliers);
-        Console.WriteLine($"Exported {csvBytes.Length} bytes to suppliers_export.csv");
+        var fileName = $"suppliers_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(csvBytes));
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
