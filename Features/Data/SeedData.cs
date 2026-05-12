@@ -14,6 +14,15 @@ public static class SeedData
 
         if (context.Brands.Any(b => !b.IsDeleted)) return;
 
+        var roles = new[]
+        {
+            new Role { Name = "Admin", Description = "Full access to all features", IsActive = true, CreatedAt = DateTime.UtcNow },
+            new Role { Name = "Manager", Description = "Manage products and inventory", IsActive = true, CreatedAt = DateTime.UtcNow },
+            new Role { Name = "Staff", Description = "View and basic operations", IsActive = true, CreatedAt = DateTime.UtcNow }
+        };
+        context.Roles.AddRange(roles);
+        context.SaveChanges();
+
         var brands = new[]
         {
             new Brand { Name = "Apple", Description = "Innovative technology products", IsActive = true, CreatedAt = DateTime.UtcNow },
@@ -52,6 +61,17 @@ public static class SeedData
             new Product { Name = "WH-1000XM5", Description = "Wireless headphones", SKU = "SON-AUD-001", Price = 399.99m, Cost = 250.00m, Quantity = 60, BrandId = 4, CategoryId = 1, SupplierId = 3, IsActive = true, CreatedAt = DateTime.UtcNow }
         };
         context.Products.AddRange(products);
+
+        var adminUser = new User
+        {
+            Username = "admin",
+            Email = "admin@productmanagement.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
+            RoleId = 1,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Users.Add(adminUser);
 
         context.SaveChanges();
     }
