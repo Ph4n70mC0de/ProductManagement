@@ -1,0 +1,61 @@
+@page "/login"
+@inject IAuthenticationService AuthenticationService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Login</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center" Style="height: 100vh;">
+    <MudPaper Class="pa-8" Elevation="3">
+        <MudText Typo="Typo.h4" GutterBottom="true" Align="Align.Center">Product Management</MudText>
+        <MudText Typo="Typo.h6" GutterBottom="true" Align="Align.Center">Sign In</MudText>
+        
+        <MudForm @ref="form" @bind-IsValid="@isValid">
+            <MudTextField @bind-Value="username" Label="Username" Required="true" Variant="Variant.Outlined" Class="mt-4" />
+            <MudTextField @bind-Value="password" Label="Password" InputType="InputType.Password" Required="true" Variant="Variant.Outlined" Class="mt-4" />
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4">@errorMessage</MudAlert>
+            }
+            
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-6" OnClick="HandleLogin" Disabled="!isValid || isLoading">
+                @if (isLoading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                }
+                else
+                {
+                    <span>Login</span>
+                }
+            </MudButton>
+        </MudForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private MudForm form = null!;
+    private bool isValid;
+    private bool isLoading;
+    private string username = string.Empty;
+    private string password = string.Empty;
+    private string errorMessage = string.Empty;
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        var result = await AuthenticationService.LoginAsync(username, password);
+
+        if (result.Success)
+        {
+            NavigationManager.NavigateTo("/");
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage ?? "Login failed";
+        }
+
+        isLoading = false;
+    }
+}
