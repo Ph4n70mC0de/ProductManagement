@@ -1,6 +1,7 @@
 @page "/barcodes"
 @inject IProductService ProductService
 @inject IBrandService BrandService
+@inject IJSRuntime JSRuntime
 @using ProductManagement.Features.Data.Model
 @using ProductManagement.Features.Helpers
 
@@ -84,12 +85,12 @@
     {
         if (!string.IsNullOrEmpty(_selectedProduct?.SKU))
         {
-            // JavaScript print functionality would be implemented here
+            await JSRuntime.InvokeVoidAsync("printBarcode", _selectedProduct.SKU);
         }
     }
 
     private async Task PrintSingleBarcode(Product product)
     {
-        // JavaScript print functionality for single barcode
+        await JSRuntime.InvokeVoidAsync("printBarcode", product.SKU);
     }
 }
