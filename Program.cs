@@ -32,6 +32,7 @@ builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 
 // Register services
 builder.Services.AddScoped<IUserService, UserService>();
@@ -41,6 +42,7 @@ builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IDataExportService, DataExportService>();
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
 var app = builder.Build();
 
