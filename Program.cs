@@ -6,11 +6,16 @@ using ProductManagement.Features.Services.Implementations;
 using ProductManagement.Features.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 //MudBlazor 
 builder.Services.AddMudServices();
+
+//Authentication
+builder.Services.AddScoped<AppAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<AppAuthenticationStateProvider>());
 
 //Connection string for the database, you can change it to your own connection string in appsettings.json file
 
@@ -44,6 +49,7 @@ builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IDataExportService, DataExportService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<ConfirmationService>();
 
 var app = builder.Build();
 
