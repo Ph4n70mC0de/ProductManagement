@@ -2,6 +2,7 @@
 @inject IProductService ProductService
 @inject IBrandService BrandService
 @inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
 @using ProductManagement.Features.Data.Model
 @using ProductManagement.Features.Helpers
 
@@ -53,21 +54,44 @@
                     <MudButton Size="Size.Small" OnClick="() => PrintSingleBarcode(context)">Print</MudButton>
                 </MudTd>
             </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
         </MudTable>
     </MudPaper>
 </MudContainer>
 
+@if (_loading)
+{
+    <MudOverlay Visible="_loading" ZIndex="999">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+    </MudOverlay>
+}
+
 @code {
     private IEnumerable<Product> ProductList = new List<Product>();
     private int _selectedProductId;
+    private bool _loading;
     private Product? _selectedProduct => ProductList.FirstOrDefault(p => p.Id == _selectedProductId);
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
-        if (ProductList.Any())
+        try
         {
-            _selectedProductId = ProductList.First().Id;
+            _loading = true;
+            await LoadData();
+            if (ProductList.Any())
+            {
+                _selectedProductId = ProductList.First().Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading products: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
         }
     }
 
