@@ -1,5 +1,6 @@
 @page "/brands"
 @inject IBrandService BrandService
+@inject ISnackbar Snackbar
 @using ProductManagement.Features.Data.Model
 
 <PageTitle>Brands</PageTitle>
@@ -27,8 +28,18 @@
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
             </MudTd>
         </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
     </MudTable>
 </MudContainer>
+
+@if (_loading)
+{
+    <MudOverlay Visible="_loading" ZIndex="999">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+    </MudOverlay>
+}
 
 <MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
         Style="position: fixed; bottom: 16px; right: 16px;" />
@@ -78,6 +89,7 @@
 
 @code {
     private IEnumerable<Brand> BrandList = new List<Brand>();
+    private bool _loading;
     
     private bool _createDialogVisible;
     private bool _editDialogVisible;
@@ -94,7 +106,19 @@
 
     private async Task LoadData()
     {
-        BrandList = await BrandService.GetAllBrandsAsync();
+        try
+        {
+            _loading = true;
+            BrandList = await BrandService.GetAllBrandsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading brands: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private void OpenCreateDialog()
@@ -110,9 +134,22 @@
 
     private async Task CreateBrand()
     {
-        await BrandService.CreateBrandAsync(_newBrand);
-        _createDialogVisible = false;
-        await LoadData();
+        try
+        {
+            _loading = true;
+            await BrandService.CreateBrandAsync(_newBrand);
+            _createDialogVisible = false;
+            await LoadData();
+            Snackbar.Add("Brand created successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating brand: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private void OpenEditDialog(Brand brand)
@@ -128,9 +165,22 @@
 
     private async Task UpdateBrand()
     {
-        await BrandService.UpdateBrandAsync(_editingBrand);
-        _editDialogVisible = false;
-        await LoadData();
+        try
+        {
+            _loading = true;
+            await BrandService.UpdateBrandAsync(_editingBrand);
+            _editDialogVisible = false;
+            await LoadData();
+            Snackbar.Add("Brand updated successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating brand: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private void OpenDeleteDialog(Brand brand)
@@ -149,9 +199,22 @@
     {
         if (_brandToDelete != null)
         {
-            await BrandService.DeleteBrandAsync(_brandToDelete.Id);
-            _deleteDialogVisible = false;
-            await LoadData();
+            try
+            {
+                _loading = true;
+                await BrandService.DeleteBrandAsync(_brandToDelete.Id);
+                _deleteDialogVisible = false;
+                await LoadData();
+                Snackbar.Add("Brand deleted successfully", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting brand: {ex.Message}", Severity.Error);
+            }
+            finally
+            {
+                _loading = false;
+            }
         }
     }
 }
