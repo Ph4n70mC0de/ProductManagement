@@ -1,0 +1,44 @@
+@using Microsoft.AspNetCore.Components.Routing
+@implements IDisposable
+@inject NavigationManager NavigationManager
+
+<MudBreadcrumbs Items="_items" Class="mb-4" />
+
+@code {
+    private List<MudBlazor.BreadcrumbItem> _items = new();
+
+    protected override void OnInitialized()
+    {
+        BuildBreadcrumbs();
+        NavigationManager.LocationChanged += (sender, e) => BuildBreadcrumbs();
+    }
+
+    private void BuildBreadcrumbs()
+    {
+        var uri = NavigationManager.Uri.Replace(NavigationManager.BaseUri, "/");
+        var segments = uri.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        
+        _items = new List<MudBlazor.BreadcrumbItem>
+        {
+            new("Home", "/"),
+        };
+
+        var currentPath = "";
+        foreach (var segment in segments)
+        {
+            if (segment == "login" || segment == "not-found")
+                continue;
+                
+            currentPath += $"/{segment}";
+            var displayName = segment.Split('-').Select(w => char.ToUpper(w[0]) + w.Substring(1)).Aggregate((a, b) => a + " " + b);
+            _items.Add(new(displayName, currentPath));
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= (sender, e) => BuildBreadcrumbs();
+    }
+}
