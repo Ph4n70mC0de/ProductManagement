@@ -1,5 +1,6 @@
 @page "/categories"
 @inject ICategoryService CategoryService
+@inject ISnackbar Snackbar
 @using ProductManagement.Features.Data.Model
 
 <PageTitle>Categories</PageTitle>
@@ -29,8 +30,18 @@
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
             </MudTd>
         </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
     </MudTable>
 </MudContainer>
+
+@if (_loading)
+{
+    <MudOverlay Visible="_loading" ZIndex="999">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+    </MudOverlay>
+}
 
 <MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
         Style="position: fixed; bottom: 16px; right: 16px;" />
@@ -95,6 +106,7 @@
 @code {
     private IEnumerable<Category> CategoryList = new List<Category>();
     private IEnumerable<Category> RootCategories = new List<Category>();
+    private bool _loading;
     
     private bool _createDialogVisible;
     private bool _editDialogVisible;
@@ -111,8 +123,20 @@
 
     private async Task LoadData()
     {
-        CategoryList = await CategoryService.GetAllCategoriesAsync();
-        RootCategories = await CategoryService.GetRootCategoriesAsync();
+        try
+        {
+            _loading = true;
+            CategoryList = await CategoryService.GetAllCategoriesAsync();
+            RootCategories = await CategoryService.GetRootCategoriesAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading categories: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private void OpenCreateDialog()
@@ -128,11 +152,24 @@
 
     private async Task CreateCategory()
     {
-        if (_newCategory.ParentCategoryId == 0)
-            _newCategory.ParentCategoryId = null;
-        await CategoryService.CreateCategoryAsync(_newCategory);
-        _createDialogVisible = false;
-        await LoadData();
+        try
+        {
+            _loading = true;
+            if (_newCategory.ParentCategoryId == 0)
+                _newCategory.ParentCategoryId = null;
+            await CategoryService.CreateCategoryAsync(_newCategory);
+            _createDialogVisible = false;
+            await LoadData();
+            Snackbar.Add("Category created successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating category: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private void OpenEditDialog(Category category)
@@ -148,11 +185,24 @@
 
     private async Task UpdateCategory()
     {
-        if (_editingCategory.ParentCategoryId == 0)
-            _editingCategory.ParentCategoryId = null;
-        await CategoryService.UpdateCategoryAsync(_editingCategory);
-        _editDialogVisible = false;
-        await LoadData();
+        try
+        {
+            _loading = true;
+            if (_editingCategory.ParentCategoryId == 0)
+                _editingCategory.ParentCategoryId = null;
+            await CategoryService.UpdateCategoryAsync(_editingCategory);
+            _editDialogVisible = false;
+            await LoadData();
+            Snackbar.Add("Category updated successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating category: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private void OpenDeleteDialog(Category category)
@@ -171,9 +221,22 @@
     {
         if (_categoryToDelete != null)
         {
-            await CategoryService.DeleteCategoryAsync(_categoryToDelete.Id);
-            _deleteDialogVisible = false;
-            await LoadData();
+            try
+            {
+                _loading = true;
+                await CategoryService.DeleteCategoryAsync(_categoryToDelete.Id);
+                _deleteDialogVisible = false;
+                await LoadData();
+                Snackbar.Add("Category deleted successfully", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting category: {ex.Message}", Severity.Error);
+            }
+            finally
+            {
+                _loading = false;
+            }
         }
     }
 }
