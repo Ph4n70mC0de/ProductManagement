@@ -1,5 +1,6 @@
 @page "/suppliers"
 @inject ISupplierService SupplierService
+@inject ISnackbar Snackbar
 @using ProductManagement.Features.Data.Model
 
 <PageTitle>Suppliers</PageTitle>
@@ -31,8 +32,18 @@
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
             </MudTd>
         </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
     </MudTable>
 </MudContainer>
+
+@if (_loading)
+{
+    <MudOverlay Visible="_loading" ZIndex="999">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+    </MudOverlay>
+}
 
 <MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
         Style="position: fixed; bottom: 16px; right: 16px;" />
@@ -88,6 +99,7 @@
 
 @code {
     private IEnumerable<Supplier> SupplierList = new List<Supplier>();
+    private bool _loading;
     
     private bool _createDialogVisible;
     private bool _editDialogVisible;
@@ -104,7 +116,19 @@
 
     private async Task LoadData()
     {
-        SupplierList = await SupplierService.GetAllSuppliersAsync();
+        try
+        {
+            _loading = true;
+            SupplierList = await SupplierService.GetAllSuppliersAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading suppliers: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private void OpenCreateDialog()
@@ -120,9 +144,22 @@
 
     private async Task CreateSupplier()
     {
-        await SupplierService.CreateSupplierAsync(_newSupplier);
-        _createDialogVisible = false;
-        await LoadData();
+        try
+        {
+            _loading = true;
+            await SupplierService.CreateSupplierAsync(_newSupplier);
+            _createDialogVisible = false;
+            await LoadData();
+            Snackbar.Add("Supplier created successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating supplier: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private void OpenEditDialog(Supplier supplier)
@@ -138,9 +175,22 @@
 
     private async Task UpdateSupplier()
     {
-        await SupplierService.UpdateSupplierAsync(_editingSupplier);
-        _editDialogVisible = false;
-        await LoadData();
+        try
+        {
+            _loading = true;
+            await SupplierService.UpdateSupplierAsync(_editingSupplier);
+            _editDialogVisible = false;
+            await LoadData();
+            Snackbar.Add("Supplier updated successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating supplier: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private void OpenDeleteDialog(Supplier supplier)
@@ -159,9 +209,22 @@
     {
         if (_supplierToDelete != null)
         {
-            await SupplierService.DeleteSupplierAsync(_supplierToDelete.Id);
-            _deleteDialogVisible = false;
-            await LoadData();
+            try
+            {
+                _loading = true;
+                await SupplierService.DeleteSupplierAsync(_supplierToDelete.Id);
+                _deleteDialogVisible = false;
+                await LoadData();
+                Snackbar.Add("Supplier deleted successfully", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting supplier: {ex.Message}", Severity.Error);
+            }
+            finally
+            {
+                _loading = false;
+            }
         }
     }
 }

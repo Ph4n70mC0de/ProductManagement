@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Components.Authorization;
 using ProductManagement.Features.Data;
 using ProductManagement.Features.Data.Model;
 using ProductManagement.Features.Services.Interfaces;
@@ -9,11 +10,16 @@ namespace ProductManagement.Features.Services.Implementations
     {
         private readonly AppDbContext _context;
         private readonly ILogger<AuthenticationService> _logger;
+        private readonly AppAuthenticationStateProvider _authStateProvider;
 
-        public AuthenticationService(AppDbContext context, ILogger<AuthenticationService> logger)
+        public AuthenticationService(
+            AppDbContext context, 
+            ILogger<AuthenticationService> logger,
+            AppAuthenticationStateProvider authStateProvider)
         {
             _context = context;
             _logger = logger;
+            _authStateProvider = authStateProvider;
         }
 
         public async Task<AuthenticationResult> LoginAsync(string username, string password)
@@ -38,6 +44,8 @@ namespace ProductManagement.Features.Services.Implementations
                 user.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
 
+                await _authStateProvider.MarkUserAsAuthenticated(user);
+
                 return new AuthenticationResult { Success = true, User = user };
             }
             catch (Exception ex)
@@ -49,7 +57,7 @@ namespace ProductManagement.Features.Services.Implementations
 
         public async Task LogoutAsync()
         {
-            await Task.CompletedTask;
+            await _authStateProvider.MarkUserAsLoggedOut();
         }
     }
 }

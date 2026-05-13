@@ -50,7 +50,19 @@ namespace ProductManagement.Features.Repositories.Implementations
 
         public async Task DeleteAsync(T entity)
         {
-            _dbSet.Remove(entity);
+            var isDeletedProperty = typeof(T).GetProperty("IsDeleted");
+            if (isDeletedProperty != null)
+            {
+                isDeletedProperty.SetValue(entity, true);
+                var updatedAtProperty = typeof(T).GetProperty("UpdatedAt");
+                if (updatedAtProperty != null)
+                    updatedAtProperty.SetValue(entity, DateTime.UtcNow);
+                _dbSet.Update(entity);
+            }
+            else
+            {
+                _dbSet.Remove(entity);
+            }
             await _context.SaveChangesAsync();
         }
     }

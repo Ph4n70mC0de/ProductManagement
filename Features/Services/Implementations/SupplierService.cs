@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ProductManagement.Features.Data.Model;
 using ProductManagement.Features.Helpers;
 using ProductManagement.Features.Helpers.Exceptions;
@@ -9,11 +10,13 @@ namespace ProductManagement.Features.Services.Implementations
     public class SupplierService : ISupplierService
     {
         private readonly ISupplierRepository _repository;
+        private readonly IAuditLogService _auditLogService;
         private readonly ILogger<SupplierService> _logger;
 
-        public SupplierService(ISupplierRepository repository, ILogger<SupplierService> logger)
+        public SupplierService(ISupplierRepository repository, IAuditLogService auditLogService, ILogger<SupplierService> logger)
         {
             _repository = repository;
+            _auditLogService = auditLogService;
             _logger = logger;
         }
 
@@ -51,7 +54,9 @@ namespace ProductManagement.Features.Services.Implementations
             {
                 supplier.CreatedAt = DateTime.UtcNow;
                 supplier.IsDeleted = false;
-                return await _repository.AddAsync(supplier);
+                var result = await _repository.AddAsync(supplier);
+                await _auditLogService.LogActionAsync("Supplier", result.Id, "Create", null, JsonSerializer.Serialize(new { result.Name, result.ContactPerson, result.Email }));
+                return result;
             }
             catch (Exception ex)
             {
@@ -66,8 +71,13 @@ namespace ProductManagement.Features.Services.Implementations
 
             try
             {
+                var oldSupplier = await _repository.GetByIdAsync(supplier.Id);
                 supplier.UpdatedAt = DateTime.UtcNow;
-                return await _repository.UpdateAsync(supplier);
+                var result = await _repository.UpdateAsync(supplier);
+                await _auditLogService.LogActionAsync("Supplier", supplier.Id, "Update",
+                    oldSupplier != null ? JsonSerializer.Serialize(new { oldSupplier.Name, oldSupplier.ContactPerson, oldSupplier.Email }) : null,
+                    JsonSerializer.Serialize(new { result.Name, result.ContactPerson, result.Email }));
+                return result;
             }
             catch (Exception ex)
             {
@@ -83,9 +93,16 @@ namespace ProductManagement.Features.Services.Implementations
                 var supplier = await _repository.GetByIdAsync(id);
                 if (supplier != null)
                 {
+                    if (await _repository.HasProductsAsync(id))
+                    {
+                        throw new InvalidOperationException("Cannot delete a supplier that has associated products. Please reassign or delete the products first.");
+                    }
+                    
+                    var oldValues = JsonSerializer.Serialize(new { supplier.Name, supplier.ContactPerson, supplier.IsDeleted });
                     supplier.IsDeleted = true;
                     supplier.UpdatedAt = DateTime.UtcNow;
                     await _repository.UpdateAsync(supplier);
+                    await _auditLogService.LogActionAsync("Supplier", id, "Delete", oldValues, null);
                 }
             }
             catch (Exception ex)

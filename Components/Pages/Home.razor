@@ -4,12 +4,18 @@
 @inject ICategoryService CategoryService
 @inject ISupplierService SupplierService
 @inject IUserService UserService
+@inject ISnackbar Snackbar
 @using ProductManagement.Features.Data.Model
 
 <PageTitle>Home</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
-    <MudText Typo="Typo.h3" GutterBottom="true">Product Management Dashboard</MudText>
+@if (_loading)
+{
+    <MudOverlay Visible="_loading" ZIndex="999">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+    </MudOverlay>
+}
+<MudText Typo="Typo.h3" GutterBottom="true">Product Management Dashboard</MudText>
     
     <MudGrid Class="mt-4">
         <MudItem xs="12" sm="6" md="3">
@@ -101,9 +107,11 @@
                     </MudChip>
                 </MudTd>
             </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
         </MudTable>
     </MudPaper>
-</MudContainer>
 
 @code {
     private int TotalProducts;
@@ -112,6 +120,7 @@
     private int TotalSuppliers;
     private int TotalUsers;
     private int LowStockCount;
+    private bool _loading;
     private IEnumerable<Product> RecentProducts = new List<Product>();
     private IEnumerable<Product> LowStockProducts = new List<Product>();
     private string[] CategoryLabels = Array.Empty<string>();
@@ -121,33 +130,45 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var products = await ProductService.GetAllProductsAsync();
-        TotalProducts = products.Count();
-        LowStockCount = products.Count(p => p.Quantity < 10);
-        LowStockProducts = products.Where(p => p.Quantity < 10).OrderBy(p => p.Quantity);
-        RecentProducts = products.OrderByDescending(p => p.CreatedAt).Take(5);
+        try
+        {
+            _loading = true;
+            var products = await ProductService.GetAllProductsAsync();
+            TotalProducts = products.Count();
+            LowStockCount = products.Count(p => p.Quantity < 10);
+            LowStockProducts = products.Where(p => p.Quantity < 10).OrderBy(p => p.Quantity);
+            RecentProducts = products.OrderByDescending(p => p.CreatedAt).Take(5);
 
-        // Category distribution for chart
-        var categoryGroups = products
-            .Where(p => p.Category != null)
-            .GroupBy(p => p.Category!.Name)
-            .OrderByDescending(g => g.Sum(p => p.Quantity))
-            .Take(5);
+            // Category distribution for chart
+            var categoryGroups = products
+                .Where(p => p.Category != null)
+                .GroupBy(p => p.Category!.Name)
+                .OrderByDescending(g => g.Sum(p => p.Quantity))
+                .Take(5);
 
-        CategoryLabels = categoryGroups.Select(g => g.Key).ToArray();
-        CategoryValues = categoryGroups.Select(g => (double)g.Sum(p => p.Quantity)).ToArray();
+            CategoryLabels = categoryGroups.Select(g => g.Key).ToArray();
+            CategoryValues = categoryGroups.Select(g => (double)g.Sum(p => p.Quantity)).ToArray();
 
-        var brands = await BrandService.GetAllBrandsAsync();
-        TotalBrands = brands.Count();
+            var brands = await BrandService.GetAllBrandsAsync();
+            TotalBrands = brands.Count();
 
-        var categories = await CategoryService.GetAllCategoriesAsync();
-        TotalCategories = categories.Count();
+            var categories = await CategoryService.GetAllCategoriesAsync();
+            TotalCategories = categories.Count();
 
-        var suppliers = await SupplierService.GetAllSuppliersAsync();
-        TotalSuppliers = suppliers.Count();
+            var suppliers = await SupplierService.GetAllSuppliersAsync();
+            TotalSuppliers = suppliers.Count();
 
-        var users = await UserService.GetAllUsersAsync();
-        TotalUsers = users.Count();
+            var users = await UserService.GetAllUsersAsync();
+            TotalUsers = users.Count();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading dashboard data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private void NavigateToProducts() => Navigation.NavigateTo("/products");

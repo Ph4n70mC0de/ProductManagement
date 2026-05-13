@@ -9,5 +9,6 @@ namespace ProductManagement.Features.Services.Interfaces
         Task<Product> CreateProductAsync(Product product);
         Task<Product> UpdateProductAsync(Product product);
         Task DeleteProductAsync(int id);
+        Task<string> UploadProductImageAsync(int productId, Stream fileStream, string fileName);
     }
 }

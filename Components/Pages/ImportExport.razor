@@ -5,6 +5,7 @@
 @inject ISupplierService SupplierService
 @inject IDataExportService ExportService
 @inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
 @using ProductManagement.Features.Data.Model
 @using CsvHelper
 @using System.Globalization
@@ -49,14 +50,34 @@
     </MudTabs>
 </MudContainer>
 
+@if (_loading)
+{
+    <MudOverlay Visible="_loading" ZIndex="999">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+    </MudOverlay>
+}
+
 @code {
     private IEnumerable<Product> ProductList = new List<Product>();
     private string? _importMessage;
     private Severity _importSeverity = Severity.Info;
+    private bool _loading;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
+        try
+        {
+            _loading = true;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private async Task LoadData()
@@ -66,39 +87,92 @@
 
     private async Task ExportProducts()
     {
-        var csvBytes = ExportService.ExportProductsToCsv(ProductList);
-        var fileName = $"products_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(csvBytes));
+        try
+        {
+            _loading = true;
+            var csvBytes = ExportService.ExportProductsToCsv(ProductList);
+            var fileName = $"products_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(csvBytes));
+            Snackbar.Add("Products exported successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error exporting products: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private async Task ExportBrands()
     {
-        var brands = await BrandService.GetAllBrandsAsync();
-        var csvBytes = ExportService.ExportBrandsToCsv(brands);
-        var fileName = $"brands_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(csvBytes));
+        try
+        {
+            _loading = true;
+            var brands = await BrandService.GetAllBrandsAsync();
+            var csvBytes = ExportService.ExportBrandsToCsv(brands);
+            var fileName = $"brands_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(csvBytes));
+            Snackbar.Add("Brands exported successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error exporting brands: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private async Task ExportCategories()
     {
-        var categories = await CategoryService.GetAllCategoriesAsync();
-        var csvBytes = ExportService.ExportCategoriesToCsv(categories);
-        var fileName = $"categories_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(csvBytes));
+        try
+        {
+            _loading = true;
+            var categories = await CategoryService.GetAllCategoriesAsync();
+            var csvBytes = ExportService.ExportCategoriesToCsv(categories);
+            var fileName = $"categories_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(csvBytes));
+            Snackbar.Add("Categories exported successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error exporting categories: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private async Task ExportSuppliers()
     {
-        var suppliers = await SupplierService.GetAllSuppliersAsync();
-        var csvBytes = ExportService.ExportSuppliersToCsv(suppliers);
-        var fileName = $"suppliers_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(csvBytes));
+        try
+        {
+            _loading = true;
+            var suppliers = await SupplierService.GetAllSuppliersAsync();
+            var csvBytes = ExportService.ExportSuppliersToCsv(suppliers);
+            var fileName = $"suppliers_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(csvBytes));
+            Snackbar.Add("Suppliers exported successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error exporting suppliers: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
     {
         try
         {
+            _loading = true;
             var file = e.File;
             using var reader = new StreamReader(file.OpenReadStream(1024 * 1024));
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
@@ -133,6 +207,10 @@
         {
             _importMessage = $"Error importing products: {ex.Message}";
             _importSeverity = Severity.Error;
+        }
+        finally
+        {
+            _loading = false;
         }
     }
 

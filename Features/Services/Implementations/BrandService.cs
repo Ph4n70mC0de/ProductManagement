@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ProductManagement.Features.Data.Model;
 using ProductManagement.Features.Helpers;
 using ProductManagement.Features.Helpers.Exceptions;
@@ -9,11 +10,13 @@ namespace ProductManagement.Features.Services.Implementations
     public class BrandService : IBrandService
     {
         private readonly IBrandRepository _repository;
+        private readonly IAuditLogService _auditLogService;
         private readonly ILogger<BrandService> _logger;
 
-        public BrandService(IBrandRepository repository, ILogger<BrandService> logger)
+        public BrandService(IBrandRepository repository, IAuditLogService auditLogService, ILogger<BrandService> logger)
         {
             _repository = repository;
+            _auditLogService = auditLogService;
             _logger = logger;
         }
 
@@ -51,7 +54,9 @@ namespace ProductManagement.Features.Services.Implementations
             {
                 brand.CreatedAt = DateTime.UtcNow;
                 brand.IsDeleted = false;
-                return await _repository.AddAsync(brand);
+                var result = await _repository.AddAsync(brand);
+                await _auditLogService.LogActionAsync("Brand", result.Id, "Create", null, JsonSerializer.Serialize(new { result.Name, result.Description }));
+                return result;
             }
             catch (Exception ex)
             {
@@ -66,8 +71,13 @@ namespace ProductManagement.Features.Services.Implementations
 
             try
             {
+                var oldBrand = await _repository.GetByIdAsync(brand.Id);
                 brand.UpdatedAt = DateTime.UtcNow;
-                return await _repository.UpdateAsync(brand);
+                var result = await _repository.UpdateAsync(brand);
+                await _auditLogService.LogActionAsync("Brand", brand.Id, "Update",
+                    oldBrand != null ? JsonSerializer.Serialize(new { oldBrand.Name, oldBrand.Description }) : null,
+                    JsonSerializer.Serialize(new { result.Name, result.Description }));
+                return result;
             }
             catch (Exception ex)
             {
@@ -83,9 +93,16 @@ namespace ProductManagement.Features.Services.Implementations
                 var brand = await _repository.GetByIdAsync(id);
                 if (brand != null)
                 {
+                    if (await _repository.HasProductsAsync(id))
+                    {
+                        throw new InvalidOperationException("Cannot delete a brand that has associated products. Please reassign or delete the products first.");
+                    }
+                    
+                    var oldValues = JsonSerializer.Serialize(new { brand.Name, brand.Description, brand.IsDeleted });
                     brand.IsDeleted = true;
                     brand.UpdatedAt = DateTime.UtcNow;
                     await _repository.UpdateAsync(brand);
+                    await _auditLogService.LogActionAsync("Brand", id, "Delete", oldValues, null);
                 }
             }
             catch (Exception ex)

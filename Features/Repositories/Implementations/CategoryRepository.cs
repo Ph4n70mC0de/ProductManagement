@@ -51,5 +51,15 @@ namespace ProductManagement.Features.Repositories.Implementations
 
             return ancestorIds;
         }
+
+        public async Task<bool> HasProductsAsync(int categoryId)
+        {
+            return await _context.Products.AnyAsync(p => p.CategoryId == categoryId && !p.IsDeleted);
+        }
+
+        public async Task<bool> HasSubCategoriesAsync(int categoryId)
+        {
+            return await _context.Categories.AnyAsync(c => c.ParentCategoryId == categoryId && !c.IsDeleted);
+        }
     }
 }

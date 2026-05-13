@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using ProductManagement.Features.Data.Model;
 using ProductManagement.Features.Helpers;
 using ProductManagement.Features.Helpers.Exceptions;
@@ -10,11 +11,13 @@ namespace ProductManagement.Features.Services.Implementations
     public class CategoryService : ICategoryService
     {
         private readonly ICategoryRepository _repository;
+        private readonly IAuditLogService _auditLogService;
         private readonly ILogger<CategoryService> _logger;
 
-        public CategoryService(ICategoryRepository repository, ILogger<CategoryService> logger)
+        public CategoryService(ICategoryRepository repository, IAuditLogService auditLogService, ILogger<CategoryService> logger)
         {
             _repository = repository;
+            _auditLogService = auditLogService;
             _logger = logger;
         }
 
@@ -79,7 +82,9 @@ namespace ProductManagement.Features.Services.Implementations
             {
                 category.CreatedAt = DateTime.UtcNow;
                 category.IsDeleted = false;
-                return await _repository.AddAsync(category);
+                var result = await _repository.AddAsync(category);
+                await _auditLogService.LogActionAsync("Category", result.Id, "Create", null, JsonSerializer.Serialize(new { result.Name, result.Description, result.ParentCategoryId }));
+                return result;
             }
             catch (Exception ex)
             {
@@ -95,8 +100,13 @@ namespace ProductManagement.Features.Services.Implementations
 
             try
             {
+                var oldCategory = await _repository.GetByIdAsync(category.Id);
                 category.UpdatedAt = DateTime.UtcNow;
-                return await _repository.UpdateAsync(category);
+                var result = await _repository.UpdateAsync(category);
+                await _auditLogService.LogActionAsync("Category", category.Id, "Update",
+                    oldCategory != null ? JsonSerializer.Serialize(new { oldCategory.Name, oldCategory.Description, oldCategory.ParentCategoryId }) : null,
+                    JsonSerializer.Serialize(new { result.Name, result.Description, result.ParentCategoryId }));
+                return result;
             }
             catch (Exception ex)
             {
@@ -112,9 +122,21 @@ namespace ProductManagement.Features.Services.Implementations
                 var category = await _repository.GetByIdAsync(id);
                 if (category != null)
                 {
+                    if (await _repository.HasProductsAsync(id))
+                    {
+                        throw new InvalidOperationException("Cannot delete a category that has associated products. Please reassign or delete the products first.");
+                    }
+                    
+                    if (await _repository.HasSubCategoriesAsync(id))
+                    {
+                        throw new InvalidOperationException("Cannot delete a category that has subcategories. Please reassign or delete the subcategories first.");
+                    }
+                    
+                    var oldValues = JsonSerializer.Serialize(new { category.Name, category.Description, category.IsDeleted });
                     category.IsDeleted = true;
                     category.UpdatedAt = DateTime.UtcNow;
                     await _repository.UpdateAsync(category);
+                    await _auditLogService.LogActionAsync("Category", id, "Delete", oldValues, null);
                 }
             }
             catch (Exception ex)

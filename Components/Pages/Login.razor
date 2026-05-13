@@ -1,6 +1,7 @@
 @page "/login"
 @inject IAuthenticationService AuthenticationService
 @inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
 
 <PageTitle>Login</PageTitle>
 
@@ -49,11 +50,13 @@
 
         if (result.Success)
         {
+            Snackbar.Add("Login successful!", Severity.Success);
             NavigationManager.NavigateTo("/");
         }
         else
         {
             errorMessage = result.ErrorMessage ?? "Login failed";
+            Snackbar.Add(errorMessage, Severity.Error);
         }
 
         isLoading = false;

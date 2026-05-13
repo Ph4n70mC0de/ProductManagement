@@ -46,6 +46,15 @@ public DbSet<User> Users { get; set; }
                     .HasForeignKey(c => c.ParentCategoryId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
+
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.HasOne(u => u.Role)
+                    .WithMany(r => r.Users)
+                    .HasForeignKey(u => u.RoleId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
         }
     }
 }

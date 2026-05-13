@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using ProductManagement.Features.Data.Model;
 using ProductManagement.Features.Helpers;
 using ProductManagement.Features.Helpers.Exceptions;
@@ -10,11 +11,13 @@ namespace ProductManagement.Features.Services.Implementations
     public class ProductService : IProductService
     {
         private readonly IProductRepository _repository;
+        private readonly IAuditLogService _auditLogService;
         private readonly ILogger<ProductService> _logger;
 
-        public ProductService(IProductRepository repository, ILogger<ProductService> logger)
+        public ProductService(IProductRepository repository, IAuditLogService auditLogService, ILogger<ProductService> logger)
         {
             _repository = repository;
+            _auditLogService = auditLogService;
             _logger = logger;
         }
 
@@ -52,7 +55,9 @@ namespace ProductManagement.Features.Services.Implementations
             {
                 product.CreatedAt = DateTime.UtcNow;
                 product.IsDeleted = false;
-                return await _repository.AddAsync(product);
+                var result = await _repository.AddAsync(product);
+                await _auditLogService.LogActionAsync("Product", result.Id, "Create", null, JsonSerializer.Serialize(new { result.Id, result.Name, result.SKU, result.Price, result.Quantity }));
+                return result;
             }
             catch (Exception ex)
             {
@@ -67,8 +72,13 @@ namespace ProductManagement.Features.Services.Implementations
 
             try
             {
+                var oldProduct = await _repository.GetByIdAsync(product.Id);
                 product.UpdatedAt = DateTime.UtcNow;
-                return await _repository.UpdateAsync(product);
+                var result = await _repository.UpdateAsync(product);
+                await _auditLogService.LogActionAsync("Product", product.Id, "Update", 
+                    oldProduct != null ? JsonSerializer.Serialize(new { oldProduct.Name, oldProduct.SKU, oldProduct.Price, oldProduct.Quantity }) : null,
+                    JsonSerializer.Serialize(new { result.Name, result.SKU, result.Price, result.Quantity }));
+                return result;
             }
             catch (Exception ex)
             {
@@ -84,9 +94,11 @@ namespace ProductManagement.Features.Services.Implementations
                 var product = await _repository.GetByIdAsync(id);
                 if (product != null)
                 {
+                    var oldValues = JsonSerializer.Serialize(new { product.Name, product.SKU, product.IsDeleted });
                     product.IsDeleted = true;
                     product.UpdatedAt = DateTime.UtcNow;
                     await _repository.UpdateAsync(product);
+                    await _auditLogService.LogActionAsync("Product", id, "Delete", oldValues, null);
                 }
             }
             catch (Exception ex)
@@ -129,6 +141,40 @@ namespace ProductManagement.Features.Services.Implementations
             var existing = await _repository.GetBySkuAsync(product.SKU);
             if (existing != null && existing.Id != product.Id)
                 throw new ValidationException($"A product with SKU '{product.SKU}' already exists");
+        }
+
+        public async Task<string> UploadProductImageAsync(int productId, Stream fileStream, string fileName)
+        {
+            try
+            {
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+                var extension = Path.GetExtension(fileName).ToLowerInvariant();
+                
+                if (!allowedExtensions.Contains(extension))
+                    throw new ValidationException("Invalid file type. Allowed types: jpg, jpeg, png, gif");
+
+                var product = await _repository.GetByIdAsync(productId);
+                if (product == null)
+                    throw new ValidationException("Product not found");
+
+                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "products");
+                Directory.CreateDirectory(uploadsFolder);
+
+                var filePath = Path.Combine(uploadsFolder, $"{productId}_{Guid.NewGuid()}{extension}");
+                using var fileStreamOutput = File.Create(filePath);
+                await fileStream.CopyToAsync(fileStreamOutput);
+
+                var relativePath = $"/images/products/{Path.GetFileName(filePath)}";
+                product.ImageUrl = relativePath;
+                await _repository.UpdateAsync(product);
+
+                return relativePath;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to upload image for product {ProductId}", productId);
+                throw new ServiceException("Failed to upload product image", ex);
+            }
         }
     }
 }

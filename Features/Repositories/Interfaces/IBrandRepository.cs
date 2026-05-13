@@ -4,5 +4,6 @@ namespace ProductManagement.Features.Repositories.Interfaces
 {
     public interface IBrandRepository : IGenericRepository<Brand>
     {
+        Task<bool> HasProductsAsync(int brandId);
     }
 }
