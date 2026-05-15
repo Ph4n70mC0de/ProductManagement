@@ -1,6 +1,7 @@
 @page "/brands"
 @inject IBrandService BrandService
 @inject ISnackbar Snackbar
+@using ProductManagement.Features.Data
 @using ProductManagement.Features.Data.Model
 
 <PageTitle>Brands</PageTitle>
@@ -8,7 +9,7 @@
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     <MudText Typo="Typo.h4" GutterBottom="true">Brands</MudText>
     
-    <MudTable T="Brand" Items="@BrandList" Hover="true">
+    <MudTable T="Brand" ServerData="LoadServerData" Hover="true" @ref="_table">
         <HeaderContent>
             <MudTh>Name</MudTh>
             <MudTh>Description</MudTh>
@@ -88,8 +89,8 @@
 </MudDialog>
 
 @code {
-    private IEnumerable<Brand> BrandList = new List<Brand>();
     private bool _loading;
+    private MudTable<Brand> _table = null!;
     
     private bool _createDialogVisible;
     private bool _editDialogVisible;
@@ -99,21 +100,22 @@
     private Brand _editingBrand = null!;
     private Brand? _brandToDelete;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadData();
-    }
-
-    private async Task LoadData()
+    private async Task<TableData<Brand>> LoadServerData(TableState state, CancellationToken cancellationToken)
     {
         try
         {
             _loading = true;
-            BrandList = await BrandService.GetAllBrandsAsync();
+            var result = await BrandService.GetBrandsPagedAsync(state.Page + 1, state.PageSize);
+            return new TableData<Brand> 
+            { 
+                Items = result.Items, 
+                TotalItems = result.TotalCount 
+            };
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading brands: {ex.Message}", Severity.Error);
+            return new TableData<Brand>();
         }
         finally
         {
@@ -139,7 +141,7 @@
             _loading = true;
             await BrandService.CreateBrandAsync(_newBrand);
             _createDialogVisible = false;
-            await LoadData();
+            await _table.ReloadServerData();
             Snackbar.Add("Brand created successfully", Severity.Success);
         }
         catch (Exception ex)
@@ -170,7 +172,7 @@
             _loading = true;
             await BrandService.UpdateBrandAsync(_editingBrand);
             _editDialogVisible = false;
-            await LoadData();
+            await _table.ReloadServerData();
             Snackbar.Add("Brand updated successfully", Severity.Success);
         }
         catch (Exception ex)
@@ -204,7 +206,7 @@
                 _loading = true;
                 await BrandService.DeleteBrandAsync(_brandToDelete.Id);
                 _deleteDialogVisible = false;
-                await LoadData();
+                await _table.ReloadServerData();
                 Snackbar.Add("Brand deleted successfully", Severity.Success);
             }
             catch (Exception ex)
