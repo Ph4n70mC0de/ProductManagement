@@ -1,3 +1,4 @@
+using ProductManagement.Features.Data;
 using ProductManagement.Features.Data.Model;
 
 namespace ProductManagement.Features.Services.Interfaces
@@ -5,6 +6,7 @@ namespace ProductManagement.Features.Services.Interfaces
     public interface ICategoryService
     {
         Task<IEnumerable<Category>> GetAllCategoriesAsync();
+        Task<PagedResult<Category>> GetCategoriesPagedAsync(int pageNumber, int pageSize);
         Task<Category?> GetCategoryByIdAsync(int id);
         Task<IEnumerable<Category>> GetRootCategoriesAsync();
         Task<IEnumerable<Category>> GetSubCategoriesAsync(int parentId);
