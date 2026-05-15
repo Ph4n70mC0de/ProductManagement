@@ -1,6 +1,7 @@
 @page "/suppliers"
 @inject ISupplierService SupplierService
 @inject ISnackbar Snackbar
+@using ProductManagement.Features.Data
 @using ProductManagement.Features.Data.Model
 
 <PageTitle>Suppliers</PageTitle>
@@ -8,7 +9,7 @@
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     <MudText Typo="Typo.h4" GutterBottom="true">Suppliers</MudText>
     
-    <MudTable T="Supplier" Items="@SupplierList" Hover="true">
+    <MudTable T="Supplier" ServerData="LoadServerData" Hover="true" @ref="_table">
         <HeaderContent>
             <MudTh>Name</MudTh>
             <MudTh>Contact Person</MudTh>
@@ -98,8 +99,8 @@
 </MudDialog>
 
 @code {
-    private IEnumerable<Supplier> SupplierList = new List<Supplier>();
     private bool _loading;
+    private MudTable<Supplier> _table = null!;
     
     private bool _createDialogVisible;
     private bool _editDialogVisible;
@@ -109,21 +110,22 @@
     private Supplier _editingSupplier = null!;
     private Supplier? _supplierToDelete;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadData();
-    }
-
-    private async Task LoadData()
+    private async Task<TableData<Supplier>> LoadServerData(TableState state, CancellationToken cancellationToken)
     {
         try
         {
             _loading = true;
-            SupplierList = await SupplierService.GetAllSuppliersAsync();
+            var result = await SupplierService.GetSuppliersPagedAsync(state.Page + 1, state.PageSize);
+            return new TableData<Supplier> 
+            { 
+                Items = result.Items, 
+                TotalItems = result.TotalCount 
+            };
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading suppliers: {ex.Message}", Severity.Error);
+            return new TableData<Supplier>();
         }
         finally
         {
@@ -149,7 +151,7 @@
             _loading = true;
             await SupplierService.CreateSupplierAsync(_newSupplier);
             _createDialogVisible = false;
-            await LoadData();
+            await _table.ReloadServerData();
             Snackbar.Add("Supplier created successfully", Severity.Success);
         }
         catch (Exception ex)
@@ -180,7 +182,7 @@
             _loading = true;
             await SupplierService.UpdateSupplierAsync(_editingSupplier);
             _editDialogVisible = false;
-            await LoadData();
+            await _table.ReloadServerData();
             Snackbar.Add("Supplier updated successfully", Severity.Success);
         }
         catch (Exception ex)
@@ -214,7 +216,7 @@
                 _loading = true;
                 await SupplierService.DeleteSupplierAsync(_supplierToDelete.Id);
                 _deleteDialogVisible = false;
-                await LoadData();
+                await _table.ReloadServerData();
                 Snackbar.Add("Supplier deleted successfully", Severity.Success);
             }
             catch (Exception ex)
