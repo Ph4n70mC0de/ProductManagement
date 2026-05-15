@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ProductManagement.Features.Data;
 using ProductManagement.Features.Data.Model;
 using ProductManagement.Features.Helpers;
 using ProductManagement.Features.Helpers.Exceptions;
@@ -30,6 +31,19 @@ namespace ProductManagement.Features.Services.Implementations
             {
                 _logger.LogWarning(ex, "Failed to retrieve suppliers");
                 return Enumerable.Empty<Supplier>();
+            }
+        }
+
+        public async Task<PagedResult<Supplier>> GetSuppliersPagedAsync(int pageNumber, int pageSize)
+        {
+            try
+            {
+                return await _repository.GetPagedAsync(pageNumber, pageSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to retrieve suppliers page {PageNumber}", pageNumber);
+                return new PagedResult<Supplier>();
             }
         }
 
