@@ -1,6 +1,6 @@
 @page "/barcodes"
+@attribute [Authorize]
 @inject IProductService ProductService
-@inject IBrandService BrandService
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
 @using ProductManagement.Features.Data.Model
@@ -37,7 +37,7 @@
 
     <MudPaper Elevation="2" Class="pa-4">
         <MudText Typo="Typo.h6" GutterBottom="true">Printable Product Labels</MudText>
-        <MudTable T="Product" Items="ProductList" Dense="true">
+        <MudTable T="Product" Items="ProductList" Dense="true" Breakpoint="Breakpoint.Sm">
             <HeaderContent>
                 <MudTh>Product</MudTh>
                 <MudTh>SKU</MudTh>
