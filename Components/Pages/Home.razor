@@ -62,7 +62,14 @@
         <MudItem xs="12" md="8">
             <MudPaper Elevation="2" Class="pa-4">
                 <MudText Typo="Typo.h5" GutterBottom="true">Inventory by Category</MudText>
-                <MudChart T="double" Labels="CategoryLabels" Values="CategoryValues" ChartType="ChartType.Donut" />
+                @if (CategoryLabels.Any())
+                {
+                    <MudChart T="double" ChartType="ChartType.Donut" Labels="@CategoryLabels" Values="@CategoryValues" />
+                }
+                else
+                {
+                    <MudText Color="Color.Default" Class="pa-4">No inventory data available</MudText>
+                }
             </MudPaper>
         </MudItem>
         <MudItem xs="12" md="4">
@@ -73,7 +80,7 @@
                     <MudList T="Product" Dense="true">
                         @foreach (var product in LowStockProducts.Take(5))
                         {
-                            <MudListItem>
+                            <MudListItem T="Product">
                                 <MudText>@product.Name</MudText>
                                 <MudChip T="string" Color="Color.Error" Size="Size.Small" Class="ml-2">Stock: @product.Quantity</MudChip>
                             </MudListItem>
