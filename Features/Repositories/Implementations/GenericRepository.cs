@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ProductManagement.Features.Data;
+using ProductManagement.Features.Data.Model;
 using ProductManagement.Features.Repositories.Interfaces;
 
 namespace ProductManagement.Features.Repositories.Implementations
@@ -27,6 +28,32 @@ namespace ProductManagement.Features.Repositories.Implementations
             }
             
             return await query.ToListAsync();
+        }
+
+        public virtual async Task<PagedResult<T>> GetPagedAsync(int pageNumber, int pageSize)
+        {
+            var query = _dbSet.AsQueryable();
+            
+            // Filter out soft-deleted entities if the entity has IsDeleted property
+            var isDeletedProperty = typeof(T).GetProperty("IsDeleted");
+            if (isDeletedProperty != null)
+            {
+                query = query.Where(e => EF.Property<bool>(e, "IsDeleted") == false);
+            }
+            
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+            
+            return new PagedResult<T>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
         }
 
         public async Task<T?> GetByIdAsync(int id)
