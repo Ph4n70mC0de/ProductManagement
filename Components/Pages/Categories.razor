@@ -1,6 +1,7 @@
 @page "/categories"
 @inject ICategoryService CategoryService
 @inject ISnackbar Snackbar
+@using ProductManagement.Features.Data
 @using ProductManagement.Features.Data.Model
 
 <PageTitle>Categories</PageTitle>
@@ -8,7 +9,7 @@
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     <MudText Typo="Typo.h4" GutterBottom="true">Categories</MudText>
     
-    <MudTable T="Category" Items="@CategoryList" Hover="true">
+    <MudTable T="Category" ServerData="LoadServerData" Hover="true" @ref="_table">
         <HeaderContent>
             <MudTh>Name</MudTh>
             <MudTh>Description</MudTh>
@@ -104,9 +105,9 @@
 </MudDialog>
 
 @code {
-    private IEnumerable<Category> CategoryList = new List<Category>();
     private IEnumerable<Category> RootCategories = new List<Category>();
     private bool _loading;
+    private MudTable<Category> _table = null!;
     
     private bool _createDialogVisible;
     private bool _editDialogVisible;
@@ -118,20 +119,37 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
+        await LoadReferenceData();
     }
 
-    private async Task LoadData()
+    private async Task LoadReferenceData()
     {
         try
         {
-            _loading = true;
-            CategoryList = await CategoryService.GetAllCategoriesAsync();
             RootCategories = await CategoryService.GetRootCategoriesAsync();
         }
         catch (Exception ex)
         {
+            Snackbar.Add($"Error loading reference data: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task<TableData<Category>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        try
+        {
+            _loading = true;
+            var result = await CategoryService.GetCategoriesPagedAsync(state.Page + 1, state.PageSize);
+            return new TableData<Category> 
+            { 
+                Items = result.Items, 
+                TotalItems = result.TotalCount 
+            };
+        }
+        catch (Exception ex)
+        {
             Snackbar.Add($"Error loading categories: {ex.Message}", Severity.Error);
+            return new TableData<Category>();
         }
         finally
         {
@@ -159,7 +177,8 @@
                 _newCategory.ParentCategoryId = null;
             await CategoryService.CreateCategoryAsync(_newCategory);
             _createDialogVisible = false;
-            await LoadData();
+            await _table.ReloadServerData();
+            await LoadReferenceData();
             Snackbar.Add("Category created successfully", Severity.Success);
         }
         catch (Exception ex)
@@ -192,7 +211,8 @@
                 _editingCategory.ParentCategoryId = null;
             await CategoryService.UpdateCategoryAsync(_editingCategory);
             _editDialogVisible = false;
-            await LoadData();
+            await _table.ReloadServerData();
+            await LoadReferenceData();
             Snackbar.Add("Category updated successfully", Severity.Success);
         }
         catch (Exception ex)
@@ -226,7 +246,7 @@
                 _loading = true;
                 await CategoryService.DeleteCategoryAsync(_categoryToDelete.Id);
                 _deleteDialogVisible = false;
-                await LoadData();
+                await _table.ReloadServerData();
                 Snackbar.Add("Category deleted successfully", Severity.Success);
             }
             catch (Exception ex)
