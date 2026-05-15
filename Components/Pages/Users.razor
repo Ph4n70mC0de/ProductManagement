@@ -40,6 +40,13 @@
     </MudTable>
 </MudContainer>
 
+@if (_loading)
+{
+    <MudOverlay Visible="_loading" ZIndex="999">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+    </MudOverlay>
+}
+
 <MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
         Style="position: fixed; bottom: 16px; right: 16px;" />
 
@@ -103,6 +110,7 @@
 @code {
     private IEnumerable<User> UserList = new List<User>();
     private IEnumerable<Role> RolesList = new List<Role>();
+    private bool _loading;
     
     private bool _createDialogVisible;
     private bool _editDialogVisible;
@@ -114,8 +122,20 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
-        RolesList = await RoleRepository.GetAllAsync();
+        try
+        {
+            _loading = true;
+            await LoadData();
+            RolesList = await RoleRepository.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading users: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private async Task LoadData()
@@ -138,6 +158,7 @@
     {
         try
         {
+            _loading = true;
             await UserService.CreateUserAsync(_newUser);
             _createDialogVisible = false;
             await LoadData();
@@ -146,6 +167,10 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Error creating user: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
         }
     }
 
@@ -172,6 +197,7 @@
     {
         try
         {
+            _loading = true;
             await UserService.UpdateUserAsync(_editingUser);
             _editDialogVisible = false;
             await LoadData();
@@ -180,6 +206,10 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Error updating user: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
         }
     }
 
@@ -201,6 +231,7 @@
         {
             try
             {
+                _loading = true;
                 await UserService.DeleteUserAsync(_userToDelete.Id);
                 _deleteDialogVisible = false;
                 await LoadData();
@@ -209,6 +240,10 @@
             catch (Exception ex)
             {
                 Snackbar.Add($"Error deleting user: {ex.Message}", Severity.Error);
+            }
+            finally
+            {
+                _loading = false;
             }
         }
     }
