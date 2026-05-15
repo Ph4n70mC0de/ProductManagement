@@ -1,4 +1,5 @@
 @page "/products"
+@attribute [Authorize]
 @inject IProductService ProductService
 @inject IBrandService BrandService
 @inject ICategoryService CategoryService
@@ -14,65 +15,96 @@
     <MudText Typo="Typo.h4" GutterBottom="true">Products</MudText>
     
     <MudPaper Class="pa-4 mb-4">
-        <MudTextField @bind-Value="_searchString" Placeholder="Search by name or SKU" 
-                      AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" 
-                      Immediate="true" IconSize="Size.Medium" Class="mt-0" OnKeyUp="OnSearchKeyUp"></MudTextField>
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField @bind-Value="_searchString" Placeholder="Search by name or SKU" 
+                              AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" 
+                              Immediate="true" IconSize="Size.Medium" Class="mt-0"
+                              OnKeyUp="OnSearchKeyUp"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudSelect @bind-Value="_selectedBrandId" Label="Filter by Brand" Clearable="true" Variant="Variant.Outlined" Immediate="true"
+                           @bind-Value:after="OnFilterChangedAsync">
+                    @foreach (var brand in BrandList)
+                    {
+                        <MudSelectItem Value="brand.Id">@brand.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudSelect @bind-Value="_selectedCategoryId" Label="Filter by Category" Clearable="true" Variant="Variant.Outlined" Immediate="true"
+                           @bind-Value:after="OnFilterChangedAsync">
+                    @foreach (var category in CategoryList)
+                    {
+                        <MudSelectItem Value="category.Id">@category.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
     </MudPaper>
 
-    <MudTable T="Product" ServerData="LoadServerData" Hover="true" @ref="_table">
-        <HeaderContent>
-            <MudTh>Image</MudTh>
-            <MudTh>Name</MudTh>
-            <MudTh>SKU</MudTh>
-            <MudTh>Price</MudTh>
-            <MudTh>Quantity</MudTh>
-            <MudTh>IsActive</MudTh>
-            <MudTh>Brand</MudTh>
-            <MudTh>Category</MudTh>
-            <MudTh>Supplier</MudTh>
-            <MudTh>Actions</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Image">
-                @if (!string.IsNullOrEmpty(context.ImageUrl))
-                {
-                    <MudAvatar Src="@context.ImageUrl" Size="Size.Small" />
-                }
-            </MudTd>
-            <MudTd DataLabel="Name">@context.Name</MudTd>
-            <MudTd DataLabel="SKU">@context.SKU</MudTd>
-            <MudTd DataLabel="Price">@context.Price.ToString("C")</MudTd>
-            <MudTd DataLabel="Quantity">
-                <MudChip T="string" Color="@(context.Quantity < 10 ? Color.Error : context.Quantity < 30 ? Color.Warning : Color.Success)" 
-                         Size="Size.Small">@context.Quantity</MudChip>
-            </MudTd>
-            <MudTd DataLabel="IsActive">
-                <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
-                    @(context.IsActive ? "Active" : "Inactive")
-                </MudChip>
-            </MudTd>
-            <MudTd DataLabel="Brand">@context.Brand?.Name</MudTd>
-            <MudTd DataLabel="Category">@context.Category?.Name</MudTd>
-            <MudTd DataLabel="Supplier">@context.Supplier?.Name</MudTd>
-            <MudTd DataLabel="Actions">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditDialog(context)" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
-            </MudTd>
-        </RowTemplate>
-        <PagerContent>
-            <MudTablePager />
-        </PagerContent>
-    </MudTable>
+    @if (!_dataLoaded && _initialLoading)
+    {
+        <MudPaper Class="pa-8" Style="text-align: center;">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.body2" Color="Color.Default" Class="mt-4">Loading products...</MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="@(_loading ? "" : "mud-invisible")" Style="height: 3px;" />
+
+        <MudTable T="Product" ServerData="LoadServerData" Hover="true" @ref="_table" Breakpoint="Breakpoint.Sm">
+            <HeaderContent>
+                <MudTh>Image</MudTh>
+                <MudTh>Name</MudTh>
+                <MudTh>SKU</MudTh>
+                <MudTh>Price</MudTh>
+                <MudTh>Quantity</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Brand</MudTh>
+                <MudTh>Category</MudTh>
+                <MudTh>Supplier</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Image">
+                    @if (!string.IsNullOrEmpty(context.ImageUrl))
+                    {
+                        <img src="@context.ImageUrl" alt="@context.Name" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" />
+                    }
+                </MudTd>
+                <MudTd DataLabel="Name">@context.Name</MudTd>
+                <MudTd DataLabel="SKU">@context.SKU</MudTd>
+                <MudTd DataLabel="Price">@context.Price.ToString("C")</MudTd>
+                <MudTd DataLabel="Quantity">
+                    <MudChip T="string" Color="@(context.Quantity < 10 ? Color.Error : context.Quantity < 30 ? Color.Warning : Color.Success)" 
+                             Size="Size.Small">@context.Quantity</MudChip>
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
+                        @(context.IsActive ? "Active" : "Inactive")
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Brand">@context.Brand?.Name</MudTd>
+                <MudTd DataLabel="Category">@context.Category?.Name</MudTd>
+                <MudTd DataLabel="Supplier">@context.Supplier?.Name</MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="() => OpenEditDialog(context)" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="() => OpenDeleteDialog(context)" />
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText Typo="Typo.body1" Color="Color.Default" Class="pa-4">No products found.</MudText>
+            </NoRecordsContent>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    }
 </MudContainer>
 
-@if (_loading)
-{
-    <MudOverlay Visible="_loading" ZIndex="999">
-        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-    </MudOverlay>
-}
-
-<MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
+<MudFab StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
         Style="position: fixed; bottom: 16px; right: 16px;" />
 
 <MudDialog @bind-Visible="_createDialogVisible">
@@ -80,32 +112,47 @@
         <MudText Typo="Typo.h6">Create Product</MudText>
     </TitleContent>
     <DialogContent>
-        <MudTextField @bind-Value="_newProduct.Name" Label="Name" Required="true" />
-        <MudTextField @bind-Value="_newProduct.SKU" Label="SKU" Required="true" />
-        <MudTextField @bind-Value="_newProduct.ImageUrl" Label="Image URL" />
-        <MudTextField @bind-Value="_newProduct.Description" Label="Description" Lines="3" />
-        <MudNumericField @bind-Value="_newProduct.Price" Label="Price" Required="true" />
-        <MudNumericField @bind-Value="_newProduct.Cost" Label="Cost" />
-        <MudNumericField @bind-Value="_newProduct.Quantity" Label="Quantity" />
-        <MudSelect @bind-Value="_newProduct.BrandId" Label="Brand" Required="true">
+        <MudTextField @bind-Value="_newProduct.Name" Label="Name" Required="true" RequiredError="Name is required" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_newProduct.SKU" Label="SKU" Required="true" RequiredError="SKU is required" Immediate="true" Class="mb-3" />
+        <MudText Typo="Typo.body2" Class="mb-2">Product Image</MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_newProduct.ImageUrl" Label="Image URL" Immediate="true" Placeholder="https://example.com/image.jpg" Class="mb-3" />
+            </MudItem>
+            <MudItem xs="12" sm="6" Class="d-flex align-center mb-3">
+                <InputFile OnChange="(e) => HandleImageUpload(e, false)" accept=".jpg,.jpeg,.png,.gif" />
+            </MudItem>
+        </MudGrid>
+        @if (!string.IsNullOrEmpty(_newProduct.ImageUrl))
+        {
+            <div Style="text-align: center; margin: 8px 0;" class="mb-3">
+                <img src="@_newProduct.ImageUrl" alt="Preview" style="max-height: 120px; max-width: 100%; border-radius: 4px;" />
+            </div>
+        }
+        <MudTextField @bind-Value="_newProduct.Description" Label="Description" Lines="3" Immediate="true" Class="mb-3" />
+        <MudNumericField @bind-Value="_newProduct.Price" Label="Price" Required="true" RequiredError="Price is required" Class="mb-3" />
+        <MudNumericField @bind-Value="_newProduct.Cost" Label="Cost" Class="mb-3" />
+        <MudNumericField @bind-Value="_newProduct.Quantity" Label="Quantity" Class="mb-3" />
+        <MudSelect @bind-Value="_newProduct.BrandId" Label="Brand" Required="true" RequiredError="Brand is required" Class="mb-3"
+                   ToStringFunc="@(b => BrandList.FirstOrDefault(x => x.Id == b)?.Name ?? string.Empty)">
             @foreach (var brand in BrandList)
             {
                 <MudSelectItem Value="brand.Id">@brand.Name</MudSelectItem>
             }
         </MudSelect>
-        <MudSelect @bind-Value="_newProduct.CategoryId" Label="Category" Required="true">
+        <MudSelect @bind-Value="_newProduct.CategoryId" Label="Category" Required="true" RequiredError="Category is required" Class="mb-3">
             @foreach (var category in CategoryList)
             {
                 <MudSelectItem Value="category.Id">@category.Name</MudSelectItem>
             }
         </MudSelect>
-        <MudSelect @bind-Value="_newProduct.SupplierId" Label="Supplier" Required="true">
+        <MudSelect @bind-Value="_newProduct.SupplierId" Label="Supplier" Required="true" RequiredError="Supplier is required" Class="mb-3">
             @foreach (var supplier in SupplierList)
             {
                 <MudSelectItem Value="supplier.Id">@supplier.Name</MudSelectItem>
             }
         </MudSelect>
-        <MudCheckBox @bind-Value="_newProduct.IsActive" Label="Active" />
+        <MudCheckBox @bind-Value="_newProduct.IsActive" Label="Active" Class="mb-3" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseCreateDialog">Cancel</MudButton>
@@ -118,32 +165,46 @@
         <MudText Typo="Typo.h6">Edit Product</MudText>
     </TitleContent>
     <DialogContent>
-        <MudTextField @bind-Value="_editingProduct.Name" Label="Name" Required="true" />
-        <MudTextField @bind-Value="_editingProduct.SKU" Label="SKU" Required="true" />
-        <MudTextField @bind-Value="_editingProduct.ImageUrl" Label="Image URL" />
-        <MudTextField @bind-Value="_editingProduct.Description" Label="Description" Lines="3" />
-        <MudNumericField @bind-Value="_editingProduct.Price" Label="Price" Required="true" />
-        <MudNumericField @bind-Value="_editingProduct.Cost" Label="Cost" />
-        <MudNumericField @bind-Value="_editingProduct.Quantity" Label="Quantity" />
-        <MudSelect @bind-Value="_editingProduct.BrandId" Label="Brand" Required="true">
+        <MudTextField @bind-Value="_editingProduct.Name" Label="Name" Required="true" RequiredError="Name is required" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_editingProduct.SKU" Label="SKU" Required="true" RequiredError="SKU is required" Immediate="true" Class="mb-3" />
+        <MudText Typo="Typo.body2" Class="mb-2">Product Image</MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_editingProduct.ImageUrl" Label="Image URL" Immediate="true" Placeholder="https://example.com/image.jpg" Class="mb-3" />
+            </MudItem>
+            <MudItem xs="12" sm="6" Class="d-flex align-center mb-3">
+                <InputFile OnChange="(e) => HandleImageUpload(e, true)" accept=".jpg,.jpeg,.png,.gif" />
+            </MudItem>
+        </MudGrid>
+        @if (!string.IsNullOrEmpty(_editingProduct.ImageUrl))
+        {
+            <div Style="text-align: center; margin: 8px 0;" class="mb-3">
+                <img src="@_editingProduct.ImageUrl" alt="Preview" style="max-height: 120px; max-width: 100%; border-radius: 4px;" />
+            </div>
+        }
+        <MudTextField @bind-Value="_editingProduct.Description" Label="Description" Lines="3" Immediate="true" Class="mb-3" />
+        <MudNumericField @bind-Value="_editingProduct.Price" Label="Price" Required="true" RequiredError="Price is required" Class="mb-3" />
+        <MudNumericField @bind-Value="_editingProduct.Cost" Label="Cost" Class="mb-3" />
+        <MudNumericField @bind-Value="_editingProduct.Quantity" Label="Quantity" Class="mb-3" />
+        <MudSelect @bind-Value="_editingProduct.BrandId" Label="Brand" Required="true" RequiredError="Brand is required" Class="mb-3">
             @foreach (var brand in BrandList)
             {
                 <MudSelectItem Value="brand.Id">@brand.Name</MudSelectItem>
             }
         </MudSelect>
-        <MudSelect @bind-Value="_editingProduct.CategoryId" Label="Category" Required="true">
+        <MudSelect @bind-Value="_editingProduct.CategoryId" Label="Category" Required="true" RequiredError="Category is required" Class="mb-3">
             @foreach (var category in CategoryList)
             {
                 <MudSelectItem Value="category.Id">@category.Name</MudSelectItem>
             }
         </MudSelect>
-        <MudSelect @bind-Value="_editingProduct.SupplierId" Label="Supplier" Required="true">
+        <MudSelect @bind-Value="_editingProduct.SupplierId" Label="Supplier" Required="true" RequiredError="Supplier is required" Class="mb-3">
             @foreach (var supplier in SupplierList)
             {
                 <MudSelectItem Value="supplier.Id">@supplier.Name</MudSelectItem>
             }
         </MudSelect>
-        <MudCheckBox @bind-Value="_editingProduct.IsActive" Label="Active" />
+        <MudCheckBox @bind-Value="_editingProduct.IsActive" Label="Active" Class="mb-3" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseEditDialog">Cancel</MudButton>
@@ -169,9 +230,14 @@
     private IEnumerable<Category> CategoryList = new List<Category>();
     private IEnumerable<Supplier> SupplierList = new List<Supplier>();
     private bool _loading;
+    private bool _initialLoading;
+    private bool _dataLoaded;
     
     private string _searchString = "";
+    private int? _selectedBrandId;
+    private int? _selectedCategoryId;
     private MudTable<Product> _table = null!;
+    private CancellationTokenSource? _searchCts;
     
     private bool _createDialogVisible;
     private bool _editDialogVisible;
@@ -183,7 +249,46 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _initialLoading = true;
         await LoadReferenceData();
+        _initialLoading = false;
+    }
+
+    private async Task HandleImageUpload(InputFileChangeEventArgs e, bool isEdit)
+    {
+        try
+        {
+            var file = e.File;
+            if (file == null) return;
+
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+            var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+            
+            if (!allowedExtensions.Contains(extension))
+            {
+                Snackbar.Add("Invalid file type. Allowed: jpg, jpeg, png, gif", Severity.Error);
+                return;
+            }
+
+            using var stream = new MemoryStream();
+            await file.OpenReadStream(1024 * 1024 * 5).CopyToAsync(stream);
+            var bytes = stream.ToArray();
+            var base64 = Convert.ToBase64String(bytes);
+            var dataUrl = $"data:image/{extension.TrimStart('.')};base64,{base64}";
+
+            if (isEdit)
+            {
+                _editingProduct.ImageUrl = dataUrl;
+            }
+            else
+            {
+                _newProduct.ImageUrl = dataUrl;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error uploading image: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task LoadReferenceData()
@@ -205,7 +310,8 @@
         try
         {
             _loading = true;
-            var result = await ProductService.GetProductsPagedAsync(state.Page + 1, state.PageSize);
+            var result = await ProductService.GetProductsPagedAsync(state.Page + 1, state.PageSize, _searchString);
+            _dataLoaded = true;
             return new TableData<Product> 
             { 
                 Items = result.Items, 
@@ -223,12 +329,36 @@
         }
     }
 
+    private async Task OnSearchChanged(string value)
+    {
+        _searchString = value;
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        
+        try
+        {
+            await Task.Delay(400, _searchCts.Token);
+            await _table.ReloadServerData();
+        }
+        catch (TaskCanceledException)
+        {
+            // Debounce - ignore cancelled tasks
+        }
+    }
+
     private async Task OnSearchKeyUp(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
         {
+            _searchCts?.Cancel();
             await _table.ReloadServerData();
         }
+    }
+
+    private async Task OnFilterChangedAsync()
+    {
+        _searchCts?.Cancel();
+        await _table.ReloadServerData();
     }
 
     private void OpenCreateDialog()
@@ -264,7 +394,22 @@
 
     private void OpenEditDialog(Product product)
     {
-        _editingProduct = product;
+        _editingProduct = new Product
+        {
+            Id = product.Id,
+            Name = product.Name,
+            SKU = product.SKU,
+            Description = product.Description,
+            ImageUrl = product.ImageUrl,
+            Price = product.Price,
+            Cost = product.Cost,
+            Quantity = product.Quantity,
+            BrandId = product.BrandId,
+            CategoryId = product.CategoryId,
+            SupplierId = product.SupplierId,
+            IsActive = product.IsActive,
+            CreatedAt = product.CreatedAt
+        };
         _editDialogVisible = true;
     }
 
