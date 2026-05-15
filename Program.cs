@@ -16,6 +16,7 @@ builder.Services.AddMudServices();
 //Authentication
 builder.Services.AddScoped<AppAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<AppAuthenticationStateProvider>());
+builder.Services.AddCascadingAuthenticationState();
 
 //Connection string for the database, you can change it to your own connection string in appsettings.json file
 
