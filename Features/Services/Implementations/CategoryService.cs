@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using ProductManagement.Features.Data;
 using ProductManagement.Features.Data.Model;
 using ProductManagement.Features.Helpers;
 using ProductManagement.Features.Helpers.Exceptions;
@@ -31,6 +32,19 @@ namespace ProductManagement.Features.Services.Implementations
             {
                 _logger.LogWarning(ex, "Failed to retrieve categories");
                 return Enumerable.Empty<Category>();
+            }
+        }
+
+        public async Task<PagedResult<Category>> GetCategoriesPagedAsync(int pageNumber, int pageSize)
+        {
+            try
+            {
+                return await _repository.GetPagedAsync(pageNumber, pageSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to retrieve categories page {PageNumber}", pageNumber);
+                return new PagedResult<Category>();
             }
         }
 
