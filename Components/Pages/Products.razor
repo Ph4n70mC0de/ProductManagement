@@ -4,6 +4,8 @@
 @inject ICategoryService CategoryService
 @inject ISupplierService SupplierService
 @inject ISnackbar Snackbar
+@using Microsoft.AspNetCore.Components.Web
+@using ProductManagement.Features.Data
 @using ProductManagement.Features.Data.Model
 
 <PageTitle>Products</PageTitle>
@@ -14,17 +16,17 @@
     <MudPaper Class="pa-4 mb-4">
         <MudTextField @bind-Value="_searchString" Placeholder="Search by name or SKU" 
                       AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" 
-                      Immediate="true" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                      Immediate="true" IconSize="Size.Medium" Class="mt-0" OnKeyUp="OnSearchKeyUp"></MudTextField>
     </MudPaper>
 
-    <MudTable T="Product" Items="@FilteredProducts" Hover="true">
+    <MudTable T="Product" ServerData="LoadServerData" Hover="true" @ref="_table">
         <HeaderContent>
             <MudTh>Image</MudTh>
             <MudTh>Name</MudTh>
             <MudTh>SKU</MudTh>
             <MudTh>Price</MudTh>
             <MudTh>Quantity</MudTh>
-            <MudTh>Status</MudTh>
+            <MudTh>IsActive</MudTh>
             <MudTh>Brand</MudTh>
             <MudTh>Category</MudTh>
             <MudTh>Supplier</MudTh>
@@ -44,7 +46,7 @@
                 <MudChip T="string" Color="@(context.Quantity < 10 ? Color.Error : context.Quantity < 30 ? Color.Warning : Color.Success)" 
                          Size="Size.Small">@context.Quantity</MudChip>
             </MudTd>
-            <MudTd DataLabel="Status">
+            <MudTd DataLabel="IsActive">
                 <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
                     @(context.IsActive ? "Active" : "Inactive")
                 </MudChip>
@@ -103,6 +105,7 @@
                 <MudSelectItem Value="supplier.Id">@supplier.Name</MudSelectItem>
             }
         </MudSelect>
+        <MudCheckBox @bind-Value="_newProduct.IsActive" Label="Active" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseCreateDialog">Cancel</MudButton>
@@ -140,6 +143,7 @@
                 <MudSelectItem Value="supplier.Id">@supplier.Name</MudSelectItem>
             }
         </MudSelect>
+        <MudCheckBox @bind-Value="_editingProduct.IsActive" Label="Active" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseEditDialog">Cancel</MudButton>
@@ -161,17 +165,13 @@
 </MudDialog>
 
 @code {
-    private IEnumerable<Product> ProductList = new List<Product>();
     private IEnumerable<Brand> BrandList = new List<Brand>();
     private IEnumerable<Category> CategoryList = new List<Category>();
     private IEnumerable<Supplier> SupplierList = new List<Supplier>();
     private bool _loading;
     
     private string _searchString = "";
-    private IEnumerable<Product> FilteredProducts => string.IsNullOrWhiteSpace(_searchString) 
-        ? ProductList 
-        : ProductList.Where(p => p.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) 
-                             || p.SKU.Contains(_searchString, StringComparison.OrdinalIgnoreCase));
+    private MudTable<Product> _table = null!;
     
     private bool _createDialogVisible;
     private bool _editDialogVisible;
@@ -183,26 +183,51 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
+        await LoadReferenceData();
     }
 
-    private async Task LoadData()
+    private async Task LoadReferenceData()
     {
         try
         {
-            _loading = true;
-            ProductList = await ProductService.GetAllProductsAsync();
             BrandList = await BrandService.GetAllBrandsAsync();
             CategoryList = await CategoryService.GetAllCategoriesAsync();
             SupplierList = await SupplierService.GetAllSuppliersAsync();
         }
         catch (Exception ex)
         {
+            Snackbar.Add($"Error loading reference data: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task<TableData<Product>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        try
+        {
+            _loading = true;
+            var result = await ProductService.GetProductsPagedAsync(state.Page + 1, state.PageSize);
+            return new TableData<Product> 
+            { 
+                Items = result.Items, 
+                TotalItems = result.TotalCount 
+            };
+        }
+        catch (Exception ex)
+        {
             Snackbar.Add($"Error loading products: {ex.Message}", Severity.Error);
+            return new TableData<Product>();
         }
         finally
         {
             _loading = false;
+        }
+    }
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await _table.ReloadServerData();
         }
     }
 
@@ -224,7 +249,7 @@
             _loading = true;
             await ProductService.CreateProductAsync(_newProduct);
             _createDialogVisible = false;
-            await LoadData();
+            await _table.ReloadServerData();
             Snackbar.Add("Product created successfully", Severity.Success);
         }
         catch (Exception ex)
@@ -255,7 +280,7 @@
             _loading = true;
             await ProductService.UpdateProductAsync(_editingProduct);
             _editDialogVisible = false;
-            await LoadData();
+            await _table.ReloadServerData();
             Snackbar.Add("Product updated successfully", Severity.Success);
         }
         catch (Exception ex)
@@ -289,7 +314,7 @@
                 _loading = true;
                 await ProductService.DeleteProductAsync(_productToDelete.Id);
                 _deleteDialogVisible = false;
-                await LoadData();
+                await _table.ReloadServerData();
                 Snackbar.Add("Product deleted successfully", Severity.Success);
             }
             catch (Exception ex)
