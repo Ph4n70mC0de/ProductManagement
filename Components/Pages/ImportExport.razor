@@ -1,4 +1,5 @@
 @page "/import-export"
+@attribute [Authorize]
 @inject IProductService ProductService
 @inject IBrandService BrandService
 @inject ICategoryService CategoryService
@@ -8,6 +9,7 @@
 @inject ISnackbar Snackbar
 @using ProductManagement.Features.Data.Model
 @using CsvHelper
+@using CsvHelper.Configuration
 @using System.Globalization
 
 <PageTitle>Import/Export</PageTitle>
@@ -39,7 +41,7 @@
         <MudTabPanel Text="Import">
             <MudText Typo="Typo.h6" GutterBottom="true">Import Data</MudText>
             <MudText Typo="Typo.body2" Color="Color.Default" Class="mb-2">
-                Upload a CSV file with columns: Name, SKU, Description, Price, Cost, Quantity, IsActive
+                Upload a CSV file with columns: Name, SKU, Description, Price, Cost, Quantity, IsActive, BrandName, CategoryName, SupplierName
             </MudText>
             <InputFile OnChange="HandleFileSelected" accept=".csv" />
             @if (!string.IsNullOrEmpty(_importMessage))
@@ -59,6 +61,9 @@
 
 @code {
     private IEnumerable<Product> ProductList = new List<Product>();
+    private IEnumerable<Brand> BrandList = new List<Brand>();
+    private IEnumerable<Category> CategoryList = new List<Category>();
+    private IEnumerable<Supplier> SupplierList = new List<Supplier>();
     private string? _importMessage;
     private Severity _importSeverity = Severity.Info;
     private bool _loading;
@@ -83,6 +88,9 @@
     private async Task LoadData()
     {
         ProductList = await ProductService.GetAllProductsAsync();
+        BrandList = await BrandService.GetAllBrandsAsync();
+        CategoryList = await CategoryService.GetAllCategoriesAsync();
+        SupplierList = await SupplierService.GetAllSuppliersAsync();
     }
 
     private async Task ExportProducts()
@@ -174,33 +182,87 @@
         {
             _loading = true;
             var file = e.File;
+            
+            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                HeaderValidated = null,
+                MissingFieldFound = null,
+                TrimOptions = TrimOptions.Trim
+            };
+            
             using var reader = new StreamReader(file.OpenReadStream(1024 * 1024));
-            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+            using var csv = new CsvReader(reader, config);
             
             var records = csv.GetRecords<ProductImportDto>().ToList();
             var importedCount = 0;
+            var errors = new List<string>();
 
             foreach (var record in records)
             {
-                var product = new Product
+                try
                 {
-                    Name = record.Name,
-                    SKU = record.SKU,
-                    Description = record.Description ?? string.Empty,
-                    Price = record.Price,
-                    Cost = record.Cost,
-                    Quantity = record.Quantity,
-                    CreatedAt = DateTime.UtcNow,
-                    IsActive = record.IsActive,
-                    IsDeleted = false
-                };
-                
-                await ProductService.CreateProductAsync(product);
-                importedCount++;
+                    var brand = BrandList.FirstOrDefault(b => 
+                        b.Name.Equals(record.BrandName, StringComparison.OrdinalIgnoreCase));
+                    var category = CategoryList.FirstOrDefault(c => 
+                        c.Name.Equals(record.CategoryName, StringComparison.OrdinalIgnoreCase));
+                    var supplier = SupplierList.FirstOrDefault(s => 
+                        s.Name.Equals(record.SupplierName, StringComparison.OrdinalIgnoreCase));
+
+                    if (brand == null)
+                    {
+                        errors.Add($"Row {importedCount + 1}: Brand '{record.BrandName}' not found");
+                        continue;
+                    }
+                    if (category == null)
+                    {
+                        errors.Add($"Row {importedCount + 1}: Category '{record.CategoryName}' not found");
+                        continue;
+                    }
+                    if (supplier == null)
+                    {
+                        errors.Add($"Row {importedCount + 1}: Supplier '{record.SupplierName}' not found");
+                        continue;
+                    }
+
+                    var product = new Product
+                    {
+                        Name = record.Name,
+                        SKU = record.SKU,
+                        Description = record.Description ?? string.Empty,
+                        Price = record.Price,
+                        Cost = record.Cost,
+                        Quantity = record.Quantity,
+                        BrandId = brand.Id,
+                        CategoryId = category.Id,
+                        SupplierId = supplier.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        IsActive = record.IsActive,
+                        IsDeleted = false
+                    };
+                    
+                    await ProductService.CreateProductAsync(product);
+                    importedCount++;
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Row {importedCount + 1}: {ex.Message}");
+                }
             }
 
-            _importMessage = $"Successfully imported {importedCount} products.";
-            _importSeverity = Severity.Success;
+            var message = $"Successfully imported {importedCount} product(s).";
+            if (errors.Any())
+            {
+                message += $" {errors.Count} error(s): {string.Join("; ", errors.Take(3))}";
+                if (errors.Count > 3)
+                    message += $" (+{errors.Count - 3} more)";
+                _importSeverity = errors.Count == records.Count ? Severity.Error : Severity.Warning;
+            }
+            else
+            {
+                _importSeverity = Severity.Success;
+            }
+            
+            _importMessage = message;
             await LoadData();
         }
         catch (Exception ex)
@@ -223,5 +285,8 @@
         public decimal Cost { get; set; }
         public int Quantity { get; set; }
         public bool IsActive { get; set; } = true;
+        public string BrandName { get; set; } = string.Empty;
+        public string CategoryName { get; set; } = string.Empty;
+        public string SupplierName { get; set; } = string.Empty;
     }
 }
