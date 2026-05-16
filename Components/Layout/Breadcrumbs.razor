@@ -1,4 +1,6 @@
 @using Microsoft.AspNetCore.Components.Routing
+@using System.Globalization
+@using System.Text
 @implements IDisposable
 @inject NavigationManager NavigationManager
 
@@ -7,10 +9,17 @@
 @code {
     private List<MudBlazor.BreadcrumbItem> _items = new();
 
+    [Parameter] public string HomeDisplayName { get; set; } = "Home";
+    [Parameter] public string[]? ExcludedPaths { get; set; }
+
+    private string[] GetExcludedPaths() => ExcludedPaths ?? new[] { "login", "not-found" };
+
+    private void OnLocationChanged(object sender, LocationChangedEventArgs e) => BuildBreadcrumbs();
+
     protected override void OnInitialized()
     {
         BuildBreadcrumbs();
-        NavigationManager.LocationChanged += (sender, e) => BuildBreadcrumbs();
+        NavigationManager.LocationChanged += OnLocationChanged;
     }
 
     private void BuildBreadcrumbs()
@@ -18,27 +27,25 @@
         var uri = NavigationManager.Uri.Replace(NavigationManager.BaseUri, "/");
         var segments = uri.Split('/', StringSplitOptions.RemoveEmptyEntries);
         
-        _items = new List<MudBlazor.BreadcrumbItem>
-        {
-            new("Home", "/"),
-        };
+        _items.Clear();
+        _items.Add(new(HomeDisplayName, "/"));
 
-        var currentPath = "";
+        var currentPath = new StringBuilder();
         foreach (var segment in segments)
         {
-            if (segment == "login" || segment == "not-found")
+            if (GetExcludedPaths().Contains(segment, StringComparer.OrdinalIgnoreCase))
                 continue;
                 
-            currentPath += $"/{segment}";
-            var displayName = segment.Split('-').Select(w => char.ToUpper(w[0]) + w.Substring(1)).Aggregate((a, b) => a + " " + b);
-            _items.Add(new(displayName, currentPath));
+            currentPath.Append('/').Append(segment);
+            var words = segment.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            var displayName = string.Join(" ", words.Select(w => 
+                CultureInfo.CurrentCulture.TextInfo.ToTitleCase(w.ToLowerInvariant())));
+            _items.Add(new(displayName, currentPath.ToString()));
         }
-
-        InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
     {
-        NavigationManager.LocationChanged -= (sender, e) => BuildBreadcrumbs();
+        NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }
