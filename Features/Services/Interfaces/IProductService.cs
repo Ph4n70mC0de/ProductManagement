@@ -6,7 +6,7 @@ namespace ProductManagement.Features.Services.Interfaces
     public interface IProductService
     {
         Task<IEnumerable<Product>> GetAllProductsAsync();
-        Task<PagedResult<Product>> GetProductsPagedAsync(int pageNumber, int pageSize);
+        Task<PagedResult<Product>> GetProductsPagedAsync(int pageNumber, int pageSize, string? searchString = null);
         Task<Product?> GetProductByIdAsync(int id);
         Task<Product> CreateProductAsync(Product product);
         Task<Product> UpdateProductAsync(Product product);

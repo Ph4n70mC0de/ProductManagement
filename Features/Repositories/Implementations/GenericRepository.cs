@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ProductManagement.Features.Data;
 using ProductManagement.Features.Data.Model;
 using ProductManagement.Features.Repositories.Interfaces;
@@ -30,7 +30,7 @@ namespace ProductManagement.Features.Repositories.Implementations
             return await query.ToListAsync();
         }
 
-        public virtual async Task<PagedResult<T>> GetPagedAsync(int pageNumber, int pageSize)
+public virtual async Task<PagedResult<T>> GetPagedAsync(int pageNumber, int pageSize, string? searchString = null, bool? isActive = null, CancellationToken cancellationToken = default)
         {
             var query = _dbSet.AsQueryable();
             
@@ -40,12 +40,19 @@ namespace ProductManagement.Features.Repositories.Implementations
             {
                 query = query.Where(e => EF.Property<bool>(e, "IsDeleted") == false);
             }
+
+            // Apply isActive filter if specified and the entity has IsActive property
+            var isActiveProperty = typeof(T).GetProperty("IsActive");
+            if (isActive.HasValue && isActiveProperty != null)
+            {
+                query = query.Where(e => EF.Property<bool>(e, "IsActive") == isActive.Value);
+            }
             
-            var totalCount = await query.CountAsync();
+            var totalCount = await query.CountAsync(cancellationToken);
             var items = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
             
             return new PagedResult<T>
             {

@@ -22,18 +22,28 @@
             <MudText Typo="Typo.h6" GutterBottom="true">Export Data</MudText>
             <MudGrid>
                 <MudItem xs="12" md="6">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportProducts" FullWidth="true" Class="mb-2">
-                        <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" /> Export Products (CSV)
-                    </MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportBrands" FullWidth="true" Class="mb-2">
-                        <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" /> Export Brands (CSV)
-                    </MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportCategories" FullWidth="true" Class="mb-2">
-                        <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" /> Export Categories (CSV)
-                    </MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportSuppliers" FullWidth="true" Class="mb-2">
-                        <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" /> Export Suppliers (CSV)
-                    </MudButton>
+                    @if (_loading)
+                    {
+                        <MudSkeleton Width="100%" Height="40px" Class="mb-2" />
+                        <MudSkeleton Width="100%" Height="40px" Class="mb-2" />
+                        <MudSkeleton Width="100%" Height="40px" Class="mb-2" />
+                        <MudSkeleton Width="100%" Height="40px" Class="mb-2" />
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportProducts" FullWidth="true" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" /> Export Products (CSV)
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportBrands" FullWidth="true" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" /> Export Brands (CSV)
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportCategories" FullWidth="true" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" /> Export Categories (CSV)
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportSuppliers" FullWidth="true" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" /> Export Suppliers (CSV)
+                        </MudButton>
+                    }
                 </MudItem>
             </MudGrid>
         </MudTabPanel>
@@ -51,13 +61,6 @@
         </MudTabPanel>
     </MudTabs>
 </MudContainer>
-
-@if (_loading)
-{
-    <MudOverlay Visible="_loading" ZIndex="999">
-        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-    </MudOverlay>
-}
 
 @code {
     private IEnumerable<Product> ProductList = new List<Product>();

@@ -502,6 +502,7 @@ Components/
   Login.razor
   NotFound.razor
   Products.razor
+  RedirectToLogin.razor
   Suppliers.razor
   Users.razor
  Routes.razor
@@ -524,6 +525,7 @@ Components/
   Login.razor
   NotFound.razor
   Products.razor
+  RedirectToLogin.razor
   Suppliers.razor
   Users.razor
  Routes.razor

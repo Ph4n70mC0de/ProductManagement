@@ -6,7 +6,7 @@ namespace ProductManagement.Features.Repositories.Interfaces
     public interface IProductRepository : IGenericRepository<Product>
     {
         Task<IEnumerable<Product>> GetProductsWithDetailsAsync();
-        Task<PagedResult<Product>> GetProductsWithDetailsPagedAsync(int pageNumber, int pageSize);
+        Task<PagedResult<Product>> GetProductsWithDetailsPagedAsync(int pageNumber, int pageSize, string? searchString = null);
         Task<Product?> GetProductWithDetailsAsync(int id);
         Task<Product?> GetBySkuAsync(string sku);
     }

@@ -27,16 +27,23 @@
         };
         window.printBarcode = (sku) => {
             const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
+            const html = `
                 <html>
                 <head><title>Print Barcode - ${sku}</title></head>
                 <body style="text-align:center; padding:20px;">
                     <h3>${sku}</h3>
-                    <img src="/api/barcode/${sku}" alt="Barcode" />
-                    <script>window.onload = () => { window.print(); }<\/script>
+                    <img id="barcodeImg" src="/api/barcode/${sku}" alt="Barcode" />
+                    <script>
+                        const img = document.getElementById('barcodeImg');
+                        const doPrint = () => setTimeout(() => window.print(), 100);
+                        img.onload = doPrint;
+                        img.onerror = doPrint;
+                    <\/script>
                 </body>
                 </html>
-            `);
+            `;
+            printWindow.document.write(html);
+            printWindow.document.close();
         };
     </script>
 </body>

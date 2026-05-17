@@ -12,14 +12,14 @@
         
         <MudForm @ref="form" @bind-IsValid="@isValid">
             <MudTextField @bind-Value="username" Label="Username" Required="true" Variant="Variant.Outlined" Class="mt-4" />
-            <MudTextField @bind-Value="password" Label="Password" InputType="InputType.Password" Required="true" Variant="Variant.Outlined" Class="mt-4" />
+            <MudTextField @bind-Value="password" Label="Password" InputType="InputType.Password" Required="true" MinLength="6" Variant="Variant.Outlined" Class="mt-4" />
             
             @if (!string.IsNullOrEmpty(errorMessage))
             {
                 <MudAlert Severity="Severity.Error" Class="mt-4">@errorMessage</MudAlert>
             }
             
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-6" OnClick="HandleLogin" Disabled="!isValid || isLoading">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-6" OnClick="HandleLogin" Disabled="!isValid || isLoading" aria-label="@(isLoading ? "Logging in" : "Login")">
                 @if (isLoading)
                 {
                     <MudProgressCircular Size="Size.Small" Indeterminate="true" />
@@ -43,6 +43,11 @@
 
     private async Task HandleLogin()
     {
+        if (!await form.Validate())
+        {
+            return;
+        }
+
         isLoading = true;
         errorMessage = string.Empty;
 
@@ -55,7 +60,7 @@
         }
         else
         {
-            errorMessage = result.ErrorMessage ?? "Login failed";
+            errorMessage = result.ErrorMessage ?? "Invalid username or password";
             Snackbar.Add(errorMessage, Severity.Error);
         }
 

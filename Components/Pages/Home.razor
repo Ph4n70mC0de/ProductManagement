@@ -8,13 +8,9 @@
 @using ProductManagement.Features.Data.Model
 
 <PageTitle>Home</PageTitle>
-
-@if (_loading)
-{
-    <MudOverlay Visible="_loading" ZIndex="999">
-        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-    </MudOverlay>
-}
+<MudOverlay Visible="_loading" ZIndex="999">
+    <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+</MudOverlay>
 <MudText Typo="Typo.h3" GutterBottom="true">Product Management Dashboard</MudText>
     
     <MudGrid Class="mt-4">

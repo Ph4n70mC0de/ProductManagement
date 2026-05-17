@@ -1,6 +1,8 @@
 @page "/categories"
+@attribute [Authorize]
 @inject ICategoryService CategoryService
 @inject ISnackbar Snackbar
+@using Microsoft.AspNetCore.Components.Web
 @using ProductManagement.Features.Data
 @using ProductManagement.Features.Data.Model
 
@@ -8,7 +10,15 @@
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     <MudText Typo="Typo.h4" GutterBottom="true">Categories</MudText>
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="@(_loading ? "" : "mud-invisible")" Style="height: 3px;" aria-label="Loading categories data" />
     
+    <MudPaper Class="pa-4 mb-4">
+        <MudTextField @bind-Value="_searchString" Placeholder="Search by name or description" 
+                      AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" adornmentclick="OnSearchClick"
+                      Immediate="true" IconSize="Size.Medium" Class="mt-0"
+                      OnKeyUp="OnSearchKeyUp"></MudTextField>
+    </MudPaper>
+
     <MudTable T="Category" ServerData="LoadServerData" Hover="true" @ref="_table">
         <HeaderContent>
             <MudTh>Name</MudTh>
@@ -18,33 +28,39 @@
             <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="Name">@context.Name</MudTd>
-            <MudTd DataLabel="Description">@context.Description</MudTd>
-            <MudTd DataLabel="Parent">@context.ParentCategory?.Name</MudTd>
-            <MudTd DataLabel="Status">
-                <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
-                    @(context.IsActive ? "Active" : "Inactive")
-                </MudChip>
-            </MudTd>
-            <MudTd DataLabel="Actions">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditDialog(context)" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
-            </MudTd>
+            @if (_loading)
+            {
+                <MudTd><MudSkeleton Width="70%" Height="20px" /></MudTd>
+                <MudTd><MudSkeleton Width="60%" Height="20px" /></MudTd>
+                <MudTd><MudSkeleton Width="50%" Height="20px" /></MudTd>
+                <MudTd><MudSkeleton Width="40%" Height="24px" /></MudTd>
+                <MudTd><MudSkeleton Width="80px" Height="36px" /></MudTd>
+            }
+            else
+            {
+                <MudTd DataLabel="Name">@context.Name</MudTd>
+                <MudTd DataLabel="Description">@context.Description</MudTd>
+                <MudTd DataLabel="Parent">@context.ParentCategory?.Name</MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
+                        @(context.IsActive ? "Active" : "Inactive")
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditDialog(context)" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
+                </MudTd>
+            }
         </RowTemplate>
+        <NoRecordsContent>
+            <MudText Typo="Typo.body1" Color="Color.Default" Class="pa-4">No categories found.</MudText>
+        </NoRecordsContent>
         <PagerContent>
             <MudTablePager />
         </PagerContent>
     </MudTable>
 </MudContainer>
-
-@if (_loading)
-{
-    <MudOverlay Visible="_loading" ZIndex="999">
-        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-    </MudOverlay>
-}
-
-<MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
+<MudFab StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
         Style="position: fixed; bottom: 16px; right: 16px;" />
 
 <MudDialog @bind-Visible="_createDialogVisible">
@@ -52,16 +68,16 @@
         <MudText Typo="Typo.h6">Create Category</MudText>
     </TitleContent>
     <DialogContent>
-        <MudTextField @bind-Value="_newCategory.Name" Label="Name" Required="true" />
-        <MudTextField @bind-Value="_newCategory.Description" Label="Description" Lines="3" />
-        <MudSelect @bind-Value="_newCategory.ParentCategoryId" Label="Parent Category" Clearable="true">
+        <MudTextField @bind-Value="_newCategory.Name" Label="Name" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_newCategory.Description" Label="Description" Lines="3" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudSelect @bind-Value="_newCategory.ParentCategoryId" Label="Parent Category" Clearable="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3">
             <MudSelectItem Value="0" Disabled="true">None (Root Category)</MudSelectItem>
             @foreach (var category in RootCategories)
             {
                 <MudSelectItem Value="category.Id">@category.Name</MudSelectItem>
             }
         </MudSelect>
-        <MudCheckBox @bind-Value="_newCategory.IsActive" Label="Active" />
+        <MudCheckBox @bind-Value="_newCategory.IsActive" Label="Active" Class="mb-3" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseCreateDialog">Cancel</MudButton>
@@ -74,16 +90,16 @@
         <MudText Typo="Typo.h6">Edit Category</MudText>
     </TitleContent>
     <DialogContent>
-        <MudTextField @bind-Value="_editingCategory.Name" Label="Name" Required="true" />
-        <MudTextField @bind-Value="_editingCategory.Description" Label="Description" Lines="3" />
-        <MudSelect @bind-Value="_editingCategory.ParentCategoryId" Label="Parent Category" Clearable="true">
+        <MudTextField @bind-Value="_editingCategory.Name" Label="Name" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_editingCategory.Description" Label="Description" Lines="3" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudSelect @bind-Value="_editingCategory.ParentCategoryId" Label="Parent Category" Clearable="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3">
             <MudSelectItem Value="0">None (Root Category)</MudSelectItem>
             @foreach (var category in RootCategories.Where(c => c.Id != _editingCategory.Id))
             {
                 <MudSelectItem Value="category.Id">@category.Name</MudSelectItem>
             }
         </MudSelect>
-        <MudCheckBox @bind-Value="_editingCategory.IsActive" Label="Active" />
+        <MudCheckBox @bind-Value="_editingCategory.IsActive" Label="Active" Class="mb-3" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseEditDialog">Cancel</MudButton>
@@ -93,10 +109,10 @@
 
 <MudDialog @bind-Visible="_deleteDialogVisible">
     <TitleContent>
-        <MudText Typo="Typo.h6">Delete Category</MudText>
+        <MudText Typo="Typo.h6"><MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-2" /> Delete Category</MudText>
     </TitleContent>
     <DialogContent>
-        Are you sure you want to delete "@_categoryToDelete?.Name"?
+        Are you sure you want to delete "@_categoryToDelete?.Name"? This action cannot be undone.
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseDeleteDialog">Cancel</MudButton>
@@ -107,6 +123,8 @@
 @code {
     private IEnumerable<Category> RootCategories = new List<Category>();
     private bool _loading;
+    
+    private string _searchString = "";
     private MudTable<Category> _table = null!;
     
     private bool _createDialogVisible;
@@ -118,11 +136,6 @@
     private Category? _categoryToDelete;
 
     protected override async Task OnInitializedAsync()
-    {
-        await LoadReferenceData();
-    }
-
-    private async Task LoadReferenceData()
     {
         try
         {
@@ -139,7 +152,7 @@
         try
         {
             _loading = true;
-            var result = await CategoryService.GetCategoriesPagedAsync(state.Page + 1, state.PageSize);
+            var result = await CategoryService.GetCategoriesPagedAsync(state.Page + 1, state.PageSize, _searchString);
             return new TableData<Category> 
             { 
                 Items = result.Items, 
@@ -154,6 +167,31 @@
         finally
         {
             _loading = false;
+        }
+    }
+
+    private async Task LoadReferenceData()
+    {
+        try
+        {
+            RootCategories = await CategoryService.GetRootCategoriesAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading reference data: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OnSearchClick()
+    {
+        await _table.ReloadServerData();
+    }
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await _table.ReloadServerData();
         }
     }
 

@@ -34,11 +34,11 @@ namespace ProductManagement.Features.Services.Implementations
             }
         }
 
-        public async Task<PagedResult<Supplier>> GetSuppliersPagedAsync(int pageNumber, int pageSize)
+        public async Task<PagedResult<Supplier>> GetSuppliersPagedAsync(int pageNumber, int pageSize, string? searchString = null, bool? isActive = null, CancellationToken cancellationToken = default)
         {
             try
             {
-                return await _repository.GetPagedAsync(pageNumber, pageSize);
+                return await _repository.GetPagedAsync(pageNumber, pageSize, searchString, isActive, cancellationToken);
             }
             catch (Exception ex)
             {

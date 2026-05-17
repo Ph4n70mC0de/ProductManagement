@@ -1,8 +1,11 @@
 @page "/barcodes"
 @attribute [Authorize]
+@implements IDisposable
 @inject IProductService ProductService
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
+@using Microsoft.AspNetCore.Components.Web
+@using ProductManagement.Features.Data
 @using ProductManagement.Features.Data.Model
 @using ProductManagement.Features.Helpers
 
@@ -12,13 +15,18 @@
     <MudText Typo="Typo.h4" GutterBottom="true">Barcode Generator</MudText>
     
     <MudPaper Class="pa-4 mb-4">
-        <MudSelect @bind-Value="_selectedProductId" Label="Select Product" Variant="Variant.Outlined">
-            @foreach (var product in ProductList)
-            {
-                <MudSelectItem Value="product.Id">@product.Name (@product.SKU)</MudSelectItem>
-            }
-        </MudSelect>
+        <MudTextField @bind-Value="_searchString" Placeholder="Search by name or SKU" 
+                      AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" 
+                      Immediate="true" IconSize="Size.Medium" Class="mt-0"
+                      OnKeyUp="OnSearchKeyUp"></MudTextField>
     </MudPaper>
+
+    @if (_selectedProduct == null && !_loading)
+    {
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.body2" Color="Color.Default">Select a product from the list to generate a barcode.</MudText>
+        </MudPaper>
+    }
 
     @if (_selectedProduct != null)
     {
@@ -26,7 +34,7 @@
             <MudText Typo="Typo.h6" GutterBottom="true">Barcode for @_selectedProduct.SKU</MudText>
             <MudDivider Class="mb-4" />
             <div Style="text-align: center;">
-                <img src="@GetBarcodeDataUrl(_selectedProduct.SKU)" alt="Barcode" Style="max-width: 100%; height: auto;" />
+                <img src="@GetBarcodeDataUrl(_selectedProduct.SKU)" alt="Barcode for @_selectedProduct.SKU" Style="max-width: 100%; height: auto;" />
                 <MudText Typo="Typo.caption" Color="Color.Default" Class="mt-2">@_selectedProduct.SKU</MudText>
             </div>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="PrintBarcode" Class="mt-4">
@@ -37,7 +45,7 @@
 
     <MudPaper Elevation="2" Class="pa-4">
         <MudText Typo="Typo.h6" GutterBottom="true">Printable Product Labels</MudText>
-        <MudTable T="Product" Items="ProductList" Dense="true" Breakpoint="Breakpoint.Sm">
+        <MudTable T="Product" ServerData="LoadServerData" Dense="true" Breakpoint="Breakpoint.Sm">
             <HeaderContent>
                 <MudTh>Product</MudTh>
                 <MudTh>SKU</MudTh>
@@ -45,14 +53,24 @@
                 <MudTh>Action</MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd DataLabel="Product">@context.Name</MudTd>
-                <MudTd DataLabel="SKU">@context.SKU</MudTd>
-                <MudTd DataLabel="Barcode">
-                    <img src="@GetBarcodeDataUrl(context.SKU)" alt="Barcode" Style="height: 40px;" />
-                </MudTd>
-                <MudTd DataLabel="Action">
-                    <MudButton Size="Size.Small" OnClick="() => PrintSingleBarcode(context)">Print</MudButton>
-                </MudTd>
+                @if (_loading)
+                {
+                    <MudTd><MudSkeleton Width="70%" Height="20px" /></MudTd>
+                    <MudTd><MudSkeleton Width="50%" Height="20px" /></MudTd>
+                    <MudTd><MudSkeleton Width="100px" Height="24px" /></MudTd>
+                    <MudTd><MudSkeleton Width="60px" Height="36px" /></MudTd>
+                }
+                else
+                {
+                    <MudTd DataLabel="Product" @onclick="() => SelectProduct(context)" Style="cursor:pointer">@context.Name</MudTd>
+                    <MudTd DataLabel="SKU">@context.SKU</MudTd>
+                    <MudTd DataLabel="Barcode">
+                        <img src="@GetBarcodeDataUrl(context.SKU)" alt="Barcode for @context.SKU" Style="height: 40px;" />
+                    </MudTd>
+                    <MudTd DataLabel="Action">
+                        <MudButton Size="Size.Small" OnClick="() => PrintSingleBarcode(context)">Print</MudButton>
+                    </MudTd>
+                }
             </RowTemplate>
             <PagerContent>
                 <MudTablePager />
@@ -61,28 +79,32 @@
     </MudPaper>
 </MudContainer>
 
-@if (_loading)
-{
-    <MudOverlay Visible="_loading" ZIndex="999">
-        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-    </MudOverlay>
-}
-
 @code {
-    private IEnumerable<Product> ProductList = new List<Product>();
-    private int _selectedProductId;
+    private int _selectedProductId = 0;
     private bool _loading;
-    private Product? _selectedProduct => ProductList.FirstOrDefault(p => p.Id == _selectedProductId);
+    private string _searchString = "";
+    private MudTable<Product> _table = null!;
+    private Product? _cachedSelectedProduct;
+    private readonly Dictionary<string, string> _barcodeCache = new();
+    private const int MaxCacheSize = 100;
+
+    private Product? _selectedProduct => _cachedSelectedProduct;
 
     protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
     {
         try
         {
             _loading = true;
-            await LoadData();
-            if (ProductList.Any())
+            var result = await ProductService.GetProductsPagedAsync(1, 100, _searchString);
+            if (result.Items.Any())
             {
-                _selectedProductId = ProductList.First().Id;
+                _cachedSelectedProduct = result.Items.First();
+                _selectedProductId = _cachedSelectedProduct.Id;
             }
         }
         catch (Exception ex)
@@ -95,26 +117,103 @@
         }
     }
 
-    private async Task LoadData()
+    private async Task<Product?> GetValidatedSelectedProductAsync()
     {
-        ProductList = await ProductService.GetAllProductsAsync();
+        if (_cachedSelectedProduct == null || _selectedProductId == 0)
+            return null;
+
+        var freshProduct = await ProductService.GetProductByIdAsync(_selectedProductId);
+        if (freshProduct == null)
+        {
+            _cachedSelectedProduct = null;
+            _selectedProductId = 0;
+            StateHasChanged();
+            return null;
+        }
+
+        if (_cachedSelectedProduct?.SKU != freshProduct.SKU || _cachedSelectedProduct?.Name != freshProduct.Name)
+        {
+            _cachedSelectedProduct = freshProduct;
+            StateHasChanged();
+        }
+
+        return freshProduct;
     }
 
     private string GetBarcodeDataUrl(string sku)
     {
-        return BarcodeHelper.GenerateBarcodeDataUrl(sku);
+        if (_barcodeCache.TryGetValue(sku, out var cachedUrl))
+        {
+            return cachedUrl;
+        }
+
+        if (_barcodeCache.Count >= MaxCacheSize)
+        {
+            var firstKey = _barcodeCache.Keys.First();
+            _barcodeCache.Remove(firstKey);
+        }
+
+        var dataUrl = BarcodeHelper.GenerateBarcodeDataUrl(sku);
+        _barcodeCache[sku] = dataUrl;
+        return dataUrl;
     }
 
     private async Task PrintBarcode()
     {
-        if (!string.IsNullOrEmpty(_selectedProduct?.SKU))
+        var validatedProduct = await GetValidatedSelectedProductAsync();
+        if (validatedProduct != null)
         {
-            await JSRuntime.InvokeVoidAsync("printBarcode", _selectedProduct.SKU);
+            await JSRuntime.InvokeVoidAsync("printBarcode", validatedProduct.SKU);
         }
     }
 
     private async Task PrintSingleBarcode(Product product)
     {
         await JSRuntime.InvokeVoidAsync("printBarcode", product.SKU);
+    }
+
+    private async Task<TableData<Product>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        try
+        {
+            _loading = true;
+            var result = await ProductService.GetProductsPagedAsync(state.Page + 1, state.PageSize, _searchString);
+            return new TableData<Product> 
+            { 
+                Items = result.Items, 
+                TotalItems = result.TotalCount 
+            };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading products: {ex.Message}", Severity.Error);
+            return new TableData<Product>();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Code == "NumpadEnter")
+        {
+            _cachedSelectedProduct = null;
+            _selectedProductId = 0;
+            _barcodeCache.Clear();
+            await _table.ReloadServerData();
+        }
+    }
+
+    private void SelectProduct(Product product)
+    {
+        _cachedSelectedProduct = product;
+        _selectedProductId = product.Id;
+    }
+
+    public void Dispose()
+    {
+        _barcodeCache.Clear();
     }
 }

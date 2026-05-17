@@ -6,7 +6,7 @@ namespace ProductManagement.Features.Services.Interfaces
     public interface ICategoryService
     {
         Task<IEnumerable<Category>> GetAllCategoriesAsync();
-        Task<PagedResult<Category>> GetCategoriesPagedAsync(int pageNumber, int pageSize);
+        Task<PagedResult<Category>> GetCategoriesPagedAsync(int pageNumber, int pageSize, string? searchString = null);
         Task<Category?> GetCategoryByIdAsync(int id);
         Task<IEnumerable<Category>> GetRootCategoriesAsync();
         Task<IEnumerable<Category>> GetSubCategoriesAsync(int parentId);

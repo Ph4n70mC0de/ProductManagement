@@ -1,6 +1,8 @@
 @page "/suppliers"
+@attribute [Authorize]
 @inject ISupplierService SupplierService
 @inject ISnackbar Snackbar
+@using Microsoft.AspNetCore.Components.Web
 @using ProductManagement.Features.Data
 @using ProductManagement.Features.Data.Model
 
@@ -8,7 +10,15 @@
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     <MudText Typo="Typo.h4" GutterBottom="true">Suppliers</MudText>
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="@(_loading ? "" : "mud-invisible")" Style="height: 3px;" aria-label="Loading suppliers data" />
     
+    <MudPaper Class="pa-4 mb-4">
+        <MudTextField @bind-Value="_searchString" Placeholder="Search by name, email, contact person" 
+                      AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" adornmentclick="OnSearchClick"
+                      Immediate="true" IconSize="Size.Medium" Class="mt-0"
+                      OnKeyUp="OnSearchKeyUp"></MudTextField>
+    </MudPaper>
+
     <MudTable T="Supplier" ServerData="LoadServerData" Hover="true" @ref="_table">
         <HeaderContent>
             <MudTh>Name</MudTh>
@@ -19,34 +29,42 @@
             <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="Name">@context.Name</MudTd>
-            <MudTd DataLabel="Contact Person">@context.ContactPerson</MudTd>
-            <MudTd DataLabel="Email">@context.Email</MudTd>
-            <MudTd DataLabel="Phone">@context.Phone</MudTd>
-            <MudTd DataLabel="Status">
-                <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
-                    @(context.IsActive ? "Active" : "Inactive")
-                </MudChip>
-            </MudTd>
-            <MudTd DataLabel="Actions">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditDialog(context)" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
-            </MudTd>
+            @if (_loading)
+            {
+                <MudTd><MudSkeleton Width="60%" Height="20px" /></MudTd>
+                <MudTd><MudSkeleton Width="50%" Height="20px" /></MudTd>
+                <MudTd><MudSkeleton Width="70%" Height="20px" /></MudTd>
+                <MudTd><MudSkeleton Width="40%" Height="20px" /></MudTd>
+                <MudTd><MudSkeleton Width="30%" Height="24px" /></MudTd>
+                <MudTd><MudSkeleton Width="80px" Height="36px" /></MudTd>
+            }
+            else
+            {
+                <MudTd DataLabel="Name">@context.Name</MudTd>
+                <MudTd DataLabel="Contact Person">@context.ContactPerson</MudTd>
+                <MudTd DataLabel="Email">@context.Email</MudTd>
+                <MudTd DataLabel="Phone">@context.Phone</MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
+                        @(context.IsActive ? "Active" : "Inactive")
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditDialog(context)" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
+                </MudTd>
+            }
         </RowTemplate>
+        <NoRecordsContent>
+            <MudText Typo="Typo.body1" Color="Color.Default" Class="pa-4">No suppliers found.</MudText>
+        </NoRecordsContent>
         <PagerContent>
             <MudTablePager />
         </PagerContent>
     </MudTable>
 </MudContainer>
 
-@if (_loading)
-{
-    <MudOverlay Visible="_loading" ZIndex="999">
-        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-    </MudOverlay>
-}
-
-<MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
+<MudFab StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
         Style="position: fixed; bottom: 16px; right: 16px;" />
 
 <MudDialog @bind-Visible="_createDialogVisible">
@@ -54,12 +72,12 @@
         <MudText Typo="Typo.h6">Create Supplier</MudText>
     </TitleContent>
     <DialogContent>
-        <MudTextField @bind-Value="_newSupplier.Name" Label="Name" Required="true" />
-        <MudTextField @bind-Value="_newSupplier.ContactPerson" Label="Contact Person" Required="true" />
-        <MudTextField @bind-Value="_newSupplier.Email" Label="Email" Required="true" />
-        <MudTextField @bind-Value="_newSupplier.Phone" Label="Phone" />
-        <MudTextField @bind-Value="_newSupplier.Address" Label="Address" Lines="2" />
-        <MudCheckBox @bind-Value="_newSupplier.IsActive" Label="Active" />
+        <MudTextField @bind-Value="_newSupplier.Name" Label="Name" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_newSupplier.ContactPerson" Label="Contact Person" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_newSupplier.Email" Label="Email" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_newSupplier.Phone" Label="Phone" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_newSupplier.Address" Label="Address" Lines="2" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudCheckBox @bind-Value="_newSupplier.IsActive" Label="Active" Class="mb-3" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseCreateDialog">Cancel</MudButton>
@@ -72,12 +90,12 @@
         <MudText Typo="Typo.h6">Edit Supplier</MudText>
     </TitleContent>
     <DialogContent>
-        <MudTextField @bind-Value="_editingSupplier.Name" Label="Name" Required="true" />
-        <MudTextField @bind-Value="_editingSupplier.ContactPerson" Label="Contact Person" Required="true" />
-        <MudTextField @bind-Value="_editingSupplier.Email" Label="Email" Required="true" />
-        <MudTextField @bind-Value="_editingSupplier.Phone" Label="Phone" />
-        <MudTextField @bind-Value="_editingSupplier.Address" Label="Address" Lines="2" />
-        <MudCheckBox @bind-Value="_editingSupplier.IsActive" Label="Active" />
+        <MudTextField @bind-Value="_editingSupplier.Name" Label="Name" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_editingSupplier.ContactPerson" Label="Contact Person" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_editingSupplier.Email" Label="Email" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_editingSupplier.Phone" Label="Phone" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_editingSupplier.Address" Label="Address" Lines="2" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudCheckBox @bind-Value="_editingSupplier.IsActive" Label="Active" Class="mb-3" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseEditDialog">Cancel</MudButton>
@@ -87,10 +105,10 @@
 
 <MudDialog @bind-Visible="_deleteDialogVisible">
     <TitleContent>
-        <MudText Typo="Typo.h6">Delete Supplier</MudText>
+        <MudText Typo="Typo.h6"><MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-2" /> Delete Supplier</MudText>
     </TitleContent>
     <DialogContent>
-        Are you sure you want to delete "@_supplierToDelete?.Name"?
+        Are you sure you want to delete "@_supplierToDelete?.Name"? This action cannot be undone.
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseDeleteDialog">Cancel</MudButton>
@@ -99,7 +117,10 @@
 </MudDialog>
 
 @code {
+    private IEnumerable<Role> RolesList = new List<Role>();
     private bool _loading;
+    
+    private string _searchString = "";
     private MudTable<Supplier> _table = null!;
     
     private bool _createDialogVisible;
@@ -110,12 +131,24 @@
     private Supplier _editingSupplier = null!;
     private Supplier? _supplierToDelete;
 
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // No reference data needed for suppliers
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
     private async Task<TableData<Supplier>> LoadServerData(TableState state, CancellationToken cancellationToken)
     {
         try
         {
             _loading = true;
-            var result = await SupplierService.GetSuppliersPagedAsync(state.Page + 1, state.PageSize);
+            var result = await SupplierService.GetSuppliersPagedAsync(state.Page + 1, state.PageSize, _searchString);
             return new TableData<Supplier> 
             { 
                 Items = result.Items, 
@@ -130,6 +163,19 @@
         finally
         {
             _loading = false;
+        }
+    }
+
+    private async Task OnSearchClick()
+    {
+        await _table.ReloadServerData();
+    }
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await _table.ReloadServerData();
         }
     }
 

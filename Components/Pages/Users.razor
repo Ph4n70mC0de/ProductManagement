@@ -1,16 +1,40 @@
-@page "/users"
+﻿@page "/users"
+@attribute [Authorize]
 @inject IUserService UserService
 @inject IRoleRepository RoleRepository
 @inject ISnackbar Snackbar
+@using Microsoft.AspNetCore.Components.Web
+@using ProductManagement.Features.Data
 @using ProductManagement.Features.Data.Model
 @using ProductManagement.Features.Repositories.Interfaces
 
 <PageTitle>Users</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudOverlay Visible="_loading" ZIndex="999">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+    </MudOverlay>
     <MudText Typo="Typo.h4" GutterBottom="true">Users</MudText>
     
-    <MudTable T="User" Items="@UserList" Hover="true">
+    <MudPaper Class="pa-4 mb-4">
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField @bind-Value="_searchString" Placeholder="Search by username or email" 
+                              AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" adornmentclick="OnSearchClick"
+                              Immediate="true" IconSize="Size.Medium" Class="mt-0"
+                              OnKeyUp="OnSearchKeyUp"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudSelect @bind-Value="_statusFilter" Label="Filter by Status" Clearable="true" Variant="Variant.Outlined" Immediate="true"
+                           @bind-Value:after="OnFilterChangedAsync">
+                    <MudSelectItem Value="true">Active</MudSelectItem>
+                    <MudSelectItem Value="false">Inactive</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudTable T="User" ServerData="LoadServerData" Hover="true" @ref="_table">
         <HeaderContent>
             <MudTh>Username</MudTh>
             <MudTh>Email</MudTh>
@@ -20,34 +44,42 @@
             <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="Username">@context.Username</MudTd>
-            <MudTd DataLabel="Email">@context.Email</MudTd>
-            <MudTd DataLabel="Role">@context.Role?.Name</MudTd>
-            <MudTd DataLabel="Status">
-                <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
-                    @(context.IsActive ? "Active" : "Inactive")
-                </MudChip>
-            </MudTd>
-            <MudTd DataLabel="Created">@context.CreatedAt.ToString("g")</MudTd>
-            <MudTd DataLabel="Actions">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditDialog(context)" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
-            </MudTd>
+            @if (_loading)
+            {
+                <MudTd><MudSkeleton Width="80%" Height="20px" /></MudTd>
+                <MudTd><MudSkeleton Width="70%" Height="20px" /></MudTd>
+                <MudTd><MudSkeleton Width="60%" Height="20px" /></MudTd>
+                <MudTd><MudSkeleton Width="50%" Height="24px" /></MudTd>
+                <MudTd><MudSkeleton Width="70%" Height="20px" /></MudTd>
+                <MudTd><MudSkeleton Width="80px" Height="36px" /></MudTd>
+            }
+            else
+            {
+                <MudTd DataLabel="Username">@context.Username</MudTd>
+                <MudTd DataLabel="Email">@context.Email</MudTd>
+                <MudTd DataLabel="Role">@context.Role?.Name</MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
+                        @(context.IsActive ? "Active" : "Inactive")
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Created">@context.CreatedAt.ToString("g")</MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditDialog(context)" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
+                </MudTd>
+            }
         </RowTemplate>
+        <NoRecordsContent>
+            <MudText Typo="Typo.body1" Color="Color.Default" Class="pa-4">No users found.</MudText>
+        </NoRecordsContent>
         <PagerContent>
             <MudTablePager />
         </PagerContent>
     </MudTable>
 </MudContainer>
 
-@if (_loading)
-{
-    <MudOverlay Visible="_loading" ZIndex="999">
-        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-    </MudOverlay>
-}
-
-<MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
+<MudFab StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
         Style="position: fixed; bottom: 16px; right: 16px;" />
 
 <MudDialog @bind-Visible="_createDialogVisible">
@@ -55,16 +87,16 @@
         <MudText Typo="Typo.h6">Create User</MudText>
     </TitleContent>
     <DialogContent>
-        <MudTextField @bind-Value="_newUser.Username" Label="Username" Required="true" />
-        <MudTextField @bind-Value="_newUser.Email" Label="Email" Required="true" />
-        <MudTextField @bind-Value="_newUser.PasswordHash" Label="Password" InputType="InputType.Password" Required="true" />
-        <MudSelect @bind-Value="_newUser.RoleId" Label="Role" Required="true">
+        <MudTextField @bind-Value="_newUser.Username" Label="Username" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_newUser.Email" Label="Email" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_newUser.PasswordHash" Label="Password" InputType="InputType.Password" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudSelect @bind-Value="_newUser.RoleId" Label="Role" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3">
             @foreach (var role in RolesList)
             {
                 <MudSelectItem Value="role.Id">@role.Name</MudSelectItem>
             }
         </MudSelect>
-        <MudCheckBox @bind-Value="_newUser.IsActive" Label="Active" />
+        <MudCheckBox @bind-Value="_newUser.IsActive" Label="Active" Class="mb-3" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseCreateDialog">Cancel</MudButton>
@@ -77,16 +109,16 @@
         <MudText Typo="Typo.h6">Edit User</MudText>
     </TitleContent>
     <DialogContent>
-        <MudTextField @bind-Value="_editingUser.Username" Label="Username" Required="true" />
-        <MudTextField @bind-Value="_editingUser.Email" Label="Email" Required="true" />
-        <MudTextField @bind-Value="_editingUser.PasswordHash" Label="Password (leave blank to keep current)" InputType="InputType.Password" />
-        <MudSelect @bind-Value="_editingUser.RoleId" Label="Role" Required="true">
+        <MudTextField @bind-Value="_editingUser.Username" Label="Username" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_editingUser.Email" Label="Email" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_editingUser.PasswordHash" Label="Password (leave blank to keep current)" InputType="InputType.Password" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudSelect @bind-Value="_editingUser.RoleId" Label="Role" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3">
             @foreach (var role in RolesList)
             {
                 <MudSelectItem Value="role.Id">@role.Name</MudSelectItem>
             }
         </MudSelect>
-        <MudCheckBox @bind-Value="_editingUser.IsActive" Label="Active" />
+        <MudCheckBox @bind-Value="_editingUser.IsActive" Label="Active" Class="mb-3" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseEditDialog">Cancel</MudButton>
@@ -96,10 +128,10 @@
 
 <MudDialog @bind-Visible="_deleteDialogVisible">
     <TitleContent>
-        <MudText Typo="Typo.h6">Delete User</MudText>
+        <MudText Typo="Typo.h6"><MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-2" /> Delete User</MudText>
     </TitleContent>
     <DialogContent>
-        Are you sure you want to delete "@_userToDelete?.Username"?
+        Are you sure you want to delete "@_userToDelete?.Username"? This action cannot be undone.
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseDeleteDialog">Cancel</MudButton>
@@ -108,9 +140,12 @@
 </MudDialog>
 
 @code {
-    private IEnumerable<User> UserList = new List<User>();
     private IEnumerable<Role> RolesList = new List<Role>();
     private bool _loading;
+    
+    private string _searchString = "";
+    private bool? _statusFilter;
+    private MudTable<User> _table = null!;
     
     private bool _createDialogVisible;
     private bool _editDialogVisible;
@@ -124,13 +159,30 @@
     {
         try
         {
-            _loading = true;
-            await LoadData();
             RolesList = await RoleRepository.GetAllAsync();
         }
         catch (Exception ex)
         {
+            Snackbar.Add($"Error loading roles: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task<TableData<User>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        try
+        {
+            _loading = true;
+            var result = await UserService.GetUsersPagedAsync(state.Page + 1, state.PageSize, _searchString, _statusFilter);
+            return new TableData<User> 
+            { 
+                Items = result.Items, 
+                TotalItems = result.TotalCount 
+            };
+        }
+        catch (Exception ex)
+        {
             Snackbar.Add($"Error loading users: {ex.Message}", Severity.Error);
+            return new TableData<User>();
         }
         finally
         {
@@ -138,9 +190,22 @@
         }
     }
 
-    private async Task LoadData()
+    private async Task OnSearchClick()
     {
-        UserList = await UserService.GetAllUsersAsync();
+        await _table.ReloadServerData();
+    }
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task OnFilterChangedAsync()
+    {
+        await _table.ReloadServerData();
     }
 
     private void OpenCreateDialog()
@@ -161,7 +226,7 @@
             _loading = true;
             await UserService.CreateUserAsync(_newUser);
             _createDialogVisible = false;
-            await LoadData();
+            await _table.ReloadServerData();
             Snackbar.Add("User created successfully", Severity.Success);
         }
         catch (Exception ex)
@@ -200,7 +265,7 @@
             _loading = true;
             await UserService.UpdateUserAsync(_editingUser);
             _editDialogVisible = false;
-            await LoadData();
+            await _table.ReloadServerData();
             Snackbar.Add("User updated successfully", Severity.Success);
         }
         catch (Exception ex)
@@ -234,7 +299,7 @@
                 _loading = true;
                 await UserService.DeleteUserAsync(_userToDelete.Id);
                 _deleteDialogVisible = false;
-                await LoadData();
+                await _table.ReloadServerData();
                 Snackbar.Add("User deleted successfully", Severity.Success);
             }
             catch (Exception ex)

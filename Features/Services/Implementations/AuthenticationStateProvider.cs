@@ -7,12 +7,10 @@ namespace ProductManagement.Features.Services.Implementations
 {
     public class AppAuthenticationStateProvider : AuthenticationStateProvider
     {
-        private readonly IAuthenticationService _authService;
         private User? _currentUser;
 
-        public AppAuthenticationStateProvider(IAuthenticationService authService)
+        public AppAuthenticationStateProvider()
         {
-            _authService = authService;
         }
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()

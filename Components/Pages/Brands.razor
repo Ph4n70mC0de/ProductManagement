@@ -1,6 +1,8 @@
 @page "/brands"
+@attribute [Authorize]
 @inject IBrandService BrandService
 @inject ISnackbar Snackbar
+@using Microsoft.AspNetCore.Components.Web
 @using ProductManagement.Features.Data
 @using ProductManagement.Features.Data.Model
 
@@ -8,7 +10,15 @@
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     <MudText Typo="Typo.h4" GutterBottom="true">Brands</MudText>
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="@(_loading ? "" : "mud-invisible")" Style="height: 3px;" aria-label="Loading brands data" />
     
+    <MudPaper Class="pa-4 mb-4">
+        <MudTextField @bind-Value="_searchString" Placeholder="Search by name or description" 
+                      AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" OnAdornmentClick="OnSearchClick"
+                      Immediate="true" IconSize="Size.Medium" Class="mt-0"
+                      OnKeyUp="OnSearchKeyUp"></MudTextField>
+    </MudPaper>
+
     <MudTable T="Brand" ServerData="LoadServerData" Hover="true" @ref="_table">
         <HeaderContent>
             <MudTh>Name</MudTh>
@@ -17,32 +27,37 @@
             <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="Name">@context.Name</MudTd>
-            <MudTd DataLabel="Description">@context.Description</MudTd>
-            <MudTd DataLabel="Status">
-                <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
-                    @(context.IsActive ? "Active" : "Inactive")
-                </MudChip>
-            </MudTd>
-            <MudTd DataLabel="Actions">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditDialog(context)" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
-            </MudTd>
+            @if (_loading)
+            {
+                <MudTd><MudSkeleton Width="70%" Height="20px" /></MudTd>
+                <MudTd><MudSkeleton Width="60%" Height="20px" /></MudTd>
+                <MudTd><MudSkeleton Width="40%" Height="24px" /></MudTd>
+                <MudTd><MudSkeleton Width="80px" Height="36px" /></MudTd>
+            }
+            else
+            {
+                <MudTd DataLabel="Name">@context.Name</MudTd>
+                <MudTd DataLabel="Description">@context.Description</MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
+                        @(context.IsActive ? "Active" : "Inactive")
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditDialog(context)" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => OpenDeleteDialog(context)" />
+                </MudTd>
+            }
         </RowTemplate>
+        <NoRecordsContent>
+            <MudText Typo="Typo.body1" Color="Color.Default" Class="pa-4">No brands found.</MudText>
+        </NoRecordsContent>
         <PagerContent>
             <MudTablePager />
         </PagerContent>
     </MudTable>
 </MudContainer>
-
-@if (_loading)
-{
-    <MudOverlay Visible="_loading" ZIndex="999">
-        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-    </MudOverlay>
-}
-
-<MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
+<MudFab StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenCreateDialog" 
         Style="position: fixed; bottom: 16px; right: 16px;" />
 
 <MudDialog @bind-Visible="_createDialogVisible">
@@ -50,9 +65,9 @@
         <MudText Typo="Typo.h6">Create Brand</MudText>
     </TitleContent>
     <DialogContent>
-        <MudTextField @bind-Value="_newBrand.Name" Label="Name" Required="true" />
-        <MudTextField @bind-Value="_newBrand.Description" Label="Description" Lines="3" />
-        <MudCheckBox @bind-Value="_newBrand.IsActive" Label="Active" />
+        <MudTextField @bind-Value="_newBrand.Name" Label="Name" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_newBrand.Description" Label="Description" Lines="3" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudCheckBox @bind-Value="_newBrand.IsActive" Label="Active" Class="mb-3" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseCreateDialog">Cancel</MudButton>
@@ -65,9 +80,9 @@
         <MudText Typo="Typo.h6">Edit Brand</MudText>
     </TitleContent>
     <DialogContent>
-        <MudTextField @bind-Value="_editingBrand.Name" Label="Name" Required="true" />
-        <MudTextField @bind-Value="_editingBrand.Description" Label="Description" Lines="3" />
-        <MudCheckBox @bind-Value="_editingBrand.IsActive" Label="Active" />
+        <MudTextField @bind-Value="_editingBrand.Name" Label="Name" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_editingBrand.Description" Label="Description" Lines="3" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudCheckBox @bind-Value="_editingBrand.IsActive" Label="Active" Class="mb-3" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseEditDialog">Cancel</MudButton>
@@ -77,10 +92,10 @@
 
 <MudDialog @bind-Visible="_deleteDialogVisible">
     <TitleContent>
-        <MudText Typo="Typo.h6">Delete Brand</MudText>
+        <MudText Typo="Typo.h6"><MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-2" /> Delete Brand</MudText>
     </TitleContent>
     <DialogContent>
-        Are you sure you want to delete "@_brandToDelete?.Name"?
+        Are you sure you want to delete "@_brandToDelete?.Name"? This action cannot be undone.
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseDeleteDialog">Cancel</MudButton>
@@ -96,16 +111,30 @@
     private bool _editDialogVisible;
     private bool _deleteDialogVisible;
     
+    private string _searchString = "";
+    private Timer? _searchTimer;
+
     private Brand _newBrand = new();
     private Brand _editingBrand = null!;
     private Brand? _brandToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
 
     private async Task<TableData<Brand>> LoadServerData(TableState state, CancellationToken cancellationToken)
     {
         try
         {
             _loading = true;
-            var result = await BrandService.GetBrandsPagedAsync(state.Page + 1, state.PageSize);
+            var result = await BrandService.GetBrandsPagedAsync(state.Page + 1, state.PageSize, _searchString, cancellationToken);
             return new TableData<Brand> 
             { 
                 Items = result.Items, 
@@ -123,6 +152,28 @@
         }
     }
 
+    private async Task OnSearchClick()
+    {
+        await _table.ReloadServerData();
+    }
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _searchTimer?.Dispose();
+            await _table.ReloadServerData();
+        }
+        else
+        {
+            _searchTimer?.Dispose();
+            _searchTimer = new Timer(async _ => 
+            {
+                await InvokeAsync(async () => await _table.ReloadServerData());
+            }, null, 300, Timeout.Infinite);
+        }
+    }
+
     private void OpenCreateDialog()
     {
         _newBrand = new Brand { CreatedAt = DateTime.UtcNow, IsActive = true };
@@ -136,6 +187,12 @@
 
     private async Task CreateBrand()
     {
+        if (string.IsNullOrWhiteSpace(_newBrand.Name))
+        {
+            Snackbar.Add("Name is required", Severity.Error);
+            return;
+        }
+
         try
         {
             _loading = true;
@@ -156,7 +213,16 @@
 
     private void OpenEditDialog(Brand brand)
     {
-        _editingBrand = brand;
+        _editingBrand = new Brand 
+        { 
+            Id = brand.Id,
+            Name = brand.Name,
+            Description = brand.Description,
+            IsActive = brand.IsActive,
+            CreatedAt = brand.CreatedAt,
+            UpdatedAt = brand.UpdatedAt,
+            IsDeleted = brand.IsDeleted
+        };
         _editDialogVisible = true;
     }
 
@@ -167,6 +233,12 @@
 
     private async Task UpdateBrand()
     {
+        if (string.IsNullOrWhiteSpace(_editingBrand.Name))
+        {
+            Snackbar.Add("Name is required", Severity.Error);
+            return;
+        }
+
         try
         {
             _loading = true;
@@ -188,6 +260,7 @@
     private void OpenDeleteDialog(Brand brand)
     {
         _brandToDelete = brand;
+        _pendingDeleteBrand = brand;
         _deleteDialogVisible = true;
     }
 
@@ -195,17 +268,20 @@
     {
         _deleteDialogVisible = false;
         _brandToDelete = null;
+        _pendingDeleteBrand = null;
     }
 
     private async Task DeleteBrand()
     {
-        if (_brandToDelete != null)
+        if (_pendingDeleteBrand != null)
         {
             try
             {
                 _loading = true;
-                await BrandService.DeleteBrandAsync(_brandToDelete.Id);
+                await BrandService.DeleteBrandAsync(_pendingDeleteBrand.Id);
                 _deleteDialogVisible = false;
+                _brandToDelete = null;
+                _pendingDeleteBrand = null;
                 await _table.ReloadServerData();
                 Snackbar.Add("Brand deleted successfully", Severity.Success);
             }
@@ -218,5 +294,10 @@
                 _loading = false;
             }
         }
+    }
+
+    public void Dispose()
+    {
+        _searchTimer?.Dispose();
     }
 }

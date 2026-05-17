@@ -34,11 +34,11 @@ namespace ProductManagement.Features.Services.Implementations
             }
         }
 
-        public async Task<PagedResult<User>> GetUsersPagedAsync(int pageNumber, int pageSize)
+        public async Task<PagedResult<User>> GetUsersPagedAsync(int pageNumber, int pageSize, string? searchString = null, bool? isActive = null)
         {
             try
             {
-                return await _repository.GetPagedAsync(pageNumber, pageSize);
+                return await _repository.GetPagedAsync(pageNumber, pageSize, searchString, isActive);
             }
             catch (Exception ex)
             {

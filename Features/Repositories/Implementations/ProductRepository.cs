@@ -21,7 +21,7 @@ namespace ProductManagement.Features.Repositories.Implementations
                 .ToListAsync();
         }
 
-        public async Task<PagedResult<Product>> GetProductsWithDetailsPagedAsync(int pageNumber, int pageSize)
+        public async Task<PagedResult<Product>> GetProductsWithDetailsPagedAsync(int pageNumber, int pageSize, string? searchString = null)
         {
             var query = _context.Products
                 .Include(p => p.Brand)
@@ -29,8 +29,14 @@ namespace ProductManagement.Features.Repositories.Implementations
                 .Include(p => p.Supplier)
                 .Where(p => !p.IsDeleted);
 
+            if (!string.IsNullOrWhiteSpace(searchString))
+            {
+                query = query.Where(p => p.Name.Contains(searchString) || p.SKU.Contains(searchString));
+            }
+
             var totalCount = await query.CountAsync();
             var items = await query
+                .OrderByDescending(p => p.CreatedAt)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();

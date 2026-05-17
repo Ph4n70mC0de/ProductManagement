@@ -35,11 +35,11 @@ namespace ProductManagement.Features.Services.Implementations
             }
         }
 
-        public async Task<PagedResult<Category>> GetCategoriesPagedAsync(int pageNumber, int pageSize)
+        public async Task<PagedResult<Category>> GetCategoriesPagedAsync(int pageNumber, int pageSize, string? searchString = null)
         {
             try
             {
-                return await _repository.GetPagedAsync(pageNumber, pageSize);
+                return await _repository.GetPagedAsync(pageNumber, pageSize, searchString);
             }
             catch (Exception ex)
             {

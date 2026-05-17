@@ -61,5 +61,31 @@ namespace ProductManagement.Features.Repositories.Implementations
         {
             return await _context.Categories.AnyAsync(c => c.ParentCategoryId == categoryId && !c.IsDeleted);
         }
+
+        public override async Task<PagedResult<Category>> GetPagedAsync(int pageNumber, int pageSize, string? searchString = null, bool? isActive = null, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Categories
+                .Where(c => !c.IsDeleted);
+
+            if (!string.IsNullOrWhiteSpace(searchString))
+            {
+                query = query.Where(c => c.Name.Contains(searchString) || (c.Description != null && c.Description.Contains(searchString)));
+            }
+
+            var totalCount = await query.CountAsync(cancellationToken);
+            var items = await query
+                .OrderByDescending(c => c.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return new PagedResult<Category>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
     }
 }

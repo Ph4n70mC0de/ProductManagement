@@ -1,0 +1,39 @@
+@using Microsoft.AspNetCore.Components
+@inherits ErrorBoundaryBase
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudPaper Elevation="3" Class="pa-8" Style="text-align: center;">
+        <MudIcon Icon="@Icons.Material.Filled.Error" Style="font-size: 64px; color: var(--mud-palette-error);" Class="mb-4" />
+        <MudText Typo="Typo.h4" Color="Color.Error" Class="mb-2">Something went wrong</MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            An unexpected error occurred while processing your request.
+        </MudText>
+        
+        @if (!string.IsNullOrEmpty(CurrentException?.Message))
+        {
+            <MudPaper Elevation="1" Class="pa-4 mb-4" Style="background-color: var(--mud-palette-gray-lighter); text-align: left;">
+                <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-2">Error Details:</MudText>
+                <MudText Typo="Typo.body2" Style="word-break: break-word; font-family: monospace; font-size: 0.8rem;">
+                    @CurrentException?.Message
+                </MudText>
+            </MudPaper>
+        }
+        
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Recover" Class="mr-2">Try Again</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Default" OnClick="GoHome">Go Home</MudButton>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    
+    protected override async Task OnErrorAsync(Exception exception)
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+    
+    private void GoHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

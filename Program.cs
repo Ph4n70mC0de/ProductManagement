@@ -1,3 +1,4 @@
+using ProductManagement.Features.Helpers;
 using ProductManagement.Components;
 using ProductManagement.Features.Data;
 using ProductManagement.Features.Repositories.Implementations;
@@ -74,5 +75,15 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapGet("/api/barcode/{sku}", (string sku) =>
+{
+    if (string.IsNullOrWhiteSpace(sku))
+    {
+        return Results.BadRequest("SKU cannot be empty");
+    }
+    var bytes = BarcodeHelper.GenerateBarcode(sku);
+    return Results.File(bytes, "image/png");
+});
 
 app.Run();

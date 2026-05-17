@@ -45,9 +45,9 @@
 
     @if (!_dataLoaded && _initialLoading)
     {
-        <MudPaper Class="pa-8" Style="text-align: center;">
-            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-            <MudText Typo="Typo.body2" Color="Color.Default" Class="mt-4">Loading products...</MudText>
+        <MudPaper Class="pa-4">
+            <MudSkeleton Width="100%" Height="56px" Class="mb-2" />
+            <MudSkeleton Width="100%" Height="400px" />
         </MudPaper>
     }
     else
@@ -68,31 +68,47 @@
                 <MudTh>Actions</MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd DataLabel="Image">
-                    @if (!string.IsNullOrEmpty(context.ImageUrl))
-                    {
-                        <img src="@context.ImageUrl" alt="@context.Name" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" />
-                    }
-                </MudTd>
-                <MudTd DataLabel="Name">@context.Name</MudTd>
-                <MudTd DataLabel="SKU">@context.SKU</MudTd>
-                <MudTd DataLabel="Price">@context.Price.ToString("C")</MudTd>
-                <MudTd DataLabel="Quantity">
-                    <MudChip T="string" Color="@(context.Quantity < 10 ? Color.Error : context.Quantity < 30 ? Color.Warning : Color.Success)" 
-                             Size="Size.Small">@context.Quantity</MudChip>
-                </MudTd>
-                <MudTd DataLabel="Status">
-                    <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
-                        @(context.IsActive ? "Active" : "Inactive")
-                    </MudChip>
-                </MudTd>
-                <MudTd DataLabel="Brand">@context.Brand?.Name</MudTd>
-                <MudTd DataLabel="Category">@context.Category?.Name</MudTd>
-                <MudTd DataLabel="Supplier">@context.Supplier?.Name</MudTd>
-                <MudTd DataLabel="Actions">
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="() => OpenEditDialog(context)" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="() => OpenDeleteDialog(context)" />
-                </MudTd>
+                @if (_loading && !_dataLoaded)
+                {
+                    <MudTd><MudSkeleton Width="40px" Height="40px" Class="rounded-circle" /></MudTd>
+                    <MudTd><MudSkeleton Width="80%" Height="20px" /></MudTd>
+                    <MudTd><MudSkeleton Width="60%" Height="20px" /></MudTd>
+                    <MudTd><MudSkeleton Width="50%" Height="20px" /></MudTd>
+                    <MudTd><MudSkeleton Width="40%" Height="20px" /></MudTd>
+                    <MudTd><MudSkeleton Width="60%" Height="24px" /></MudTd>
+                    <MudTd><MudSkeleton Width="70%" Height="20px" /></MudTd>
+                    <MudTd><MudSkeleton Width="70%" Height="20px" /></MudTd>
+                    <MudTd><MudSkeleton Width="70%" Height="20px" /></MudTd>
+                    <MudTd><MudSkeleton Width="80px" Height="36px" /></MudTd>
+                }
+                else
+                {
+                    <MudTd DataLabel="Image">
+                        @if (!string.IsNullOrEmpty(context.ImageUrl))
+                        {
+                            <img src="@context.ImageUrl" alt="@context.Name" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" />
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Name">@context.Name</MudTd>
+                    <MudTd DataLabel="SKU">@context.SKU</MudTd>
+                    <MudTd DataLabel="Price">@context.Price.ToString("C")</MudTd>
+                    <MudTd DataLabel="Quantity">
+                        <MudChip T="string" Color="@(context.Quantity < 10 ? Color.Error : context.Quantity < 30 ? Color.Warning : Color.Success)" 
+                                 Size="Size.Small">@context.Quantity</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
+                            @(context.IsActive ? "Active" : "Inactive")
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Brand">@context.Brand?.Name</MudTd>
+                    <MudTd DataLabel="Category">@context.Category?.Name</MudTd>
+                    <MudTd DataLabel="Supplier">@context.Supplier?.Name</MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="() => OpenEditDialog(context)" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="() => OpenDeleteDialog(context)" />
+                    </MudTd>
+                }
             </RowTemplate>
             <NoRecordsContent>
                 <MudText Typo="Typo.body1" Color="Color.Default" Class="pa-4">No products found.</MudText>
@@ -112,12 +128,12 @@
         <MudText Typo="Typo.h6">Create Product</MudText>
     </TitleContent>
     <DialogContent>
-        <MudTextField @bind-Value="_newProduct.Name" Label="Name" Required="true" RequiredError="Name is required" Immediate="true" Class="mb-3" />
-        <MudTextField @bind-Value="_newProduct.SKU" Label="SKU" Required="true" RequiredError="SKU is required" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_newProduct.Name" Label="Name" Required="true" RequiredError="Name is required" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudTextField @bind-Value="_newProduct.SKU" Label="SKU" Required="true" RequiredError="SKU is required" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
         <MudText Typo="Typo.body2" Class="mb-2">Product Image</MudText>
         <MudGrid>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_newProduct.ImageUrl" Label="Image URL" Immediate="true" Placeholder="https://example.com/image.jpg" Class="mb-3" />
+                <MudTextField @bind-Value="_newProduct.ImageUrl" Label="Image URL" Variant="Variant.Outlined" Immediate="true" Placeholder="https://example.com/image.jpg" Class="mb-3" />
             </MudItem>
             <MudItem xs="12" sm="6" Class="d-flex align-center mb-3">
                 <InputFile OnChange="(e) => HandleImageUpload(e, false)" accept=".jpg,.jpeg,.png,.gif" />
@@ -129,24 +145,24 @@
                 <img src="@_newProduct.ImageUrl" alt="Preview" style="max-height: 120px; max-width: 100%; border-radius: 4px;" />
             </div>
         }
-        <MudTextField @bind-Value="_newProduct.Description" Label="Description" Lines="3" Immediate="true" Class="mb-3" />
-        <MudNumericField @bind-Value="_newProduct.Price" Label="Price" Required="true" RequiredError="Price is required" Class="mb-3" />
-        <MudNumericField @bind-Value="_newProduct.Cost" Label="Cost" Class="mb-3" />
-        <MudNumericField @bind-Value="_newProduct.Quantity" Label="Quantity" Class="mb-3" />
-        <MudSelect @bind-Value="_newProduct.BrandId" Label="Brand" Required="true" RequiredError="Brand is required" Class="mb-3"
+        <MudTextField @bind-Value="_newProduct.Description" Label="Description" Lines="3" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudNumericField @bind-Value="_newProduct.Price" Label="Price" Required="true" RequiredError="Price is required" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudNumericField @bind-Value="_newProduct.Cost" Label="Cost" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudNumericField @bind-Value="_newProduct.Quantity" Label="Quantity" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
+        <MudSelect @bind-Value="_newProduct.BrandId" Label="Brand" Required="true" RequiredError="Brand is required" Variant="Variant.Outlined" Immediate="true" Class="mb-3"
                    ToStringFunc="@(b => BrandList.FirstOrDefault(x => x.Id == b)?.Name ?? string.Empty)">
             @foreach (var brand in BrandList)
             {
                 <MudSelectItem Value="brand.Id">@brand.Name</MudSelectItem>
             }
         </MudSelect>
-        <MudSelect @bind-Value="_newProduct.CategoryId" Label="Category" Required="true" RequiredError="Category is required" Class="mb-3">
+        <MudSelect @bind-Value="_newProduct.CategoryId" Label="Category" Required="true" RequiredError="Category is required" Variant="Variant.Outlined" Immediate="true" Class="mb-3">
             @foreach (var category in CategoryList)
             {
                 <MudSelectItem Value="category.Id">@category.Name</MudSelectItem>
             }
         </MudSelect>
-        <MudSelect @bind-Value="_newProduct.SupplierId" Label="Supplier" Required="true" RequiredError="Supplier is required" Class="mb-3">
+        <MudSelect @bind-Value="_newProduct.SupplierId" Label="Supplier" Required="true" RequiredError="Supplier is required" Variant="Variant.Outlined" Immediate="true" Class="mb-3">
             @foreach (var supplier in SupplierList)
             {
                 <MudSelectItem Value="supplier.Id">@supplier.Name</MudSelectItem>
@@ -186,7 +202,8 @@
         <MudNumericField @bind-Value="_editingProduct.Price" Label="Price" Required="true" RequiredError="Price is required" Class="mb-3" />
         <MudNumericField @bind-Value="_editingProduct.Cost" Label="Cost" Class="mb-3" />
         <MudNumericField @bind-Value="_editingProduct.Quantity" Label="Quantity" Class="mb-3" />
-        <MudSelect @bind-Value="_editingProduct.BrandId" Label="Brand" Required="true" RequiredError="Brand is required" Class="mb-3">
+        <MudSelect @bind-Value="_editingProduct.BrandId" Label="Brand" Required="true" RequiredError="Brand is required" Class="mb-3"
+                   ToStringFunc="@(b => BrandList.FirstOrDefault(x => x.Id == b)?.Name ?? string.Empty)">
             @foreach (var brand in BrandList)
             {
                 <MudSelectItem Value="brand.Id">@brand.Name</MudSelectItem>
@@ -198,7 +215,7 @@
                 <MudSelectItem Value="category.Id">@category.Name</MudSelectItem>
             }
         </MudSelect>
-        <MudSelect @bind-Value="_editingProduct.SupplierId" Label="Supplier" Required="true" RequiredError="Supplier is required" Class="mb-3">
+        <MudSelect @bind-Value="_editingProduct.SupplierId" Label="Supplier" Required="true" RequiredError="Supplier is required" Variant="Variant.Outlined" Immediate="true" Class="mb-3">
             @foreach (var supplier in SupplierList)
             {
                 <MudSelectItem Value="supplier.Id">@supplier.Name</MudSelectItem>
@@ -214,10 +231,10 @@
 
 <MudDialog @bind-Visible="_deleteDialogVisible">
     <TitleContent>
-        <MudText Typo="Typo.h6">Delete Product</MudText>
+        <MudText Typo="Typo.h6"><MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-2" /> Delete Product</MudText>
     </TitleContent>
     <DialogContent>
-        Are you sure you want to delete "@_productToDelete?.Name"?
+        Are you sure you want to delete "@_productToDelete?.Name"? This action cannot be undone.
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseDeleteDialog">Cancel</MudButton>
