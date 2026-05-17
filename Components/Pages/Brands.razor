@@ -260,7 +260,6 @@
     private void OpenDeleteDialog(Brand brand)
     {
         _brandToDelete = brand;
-        _pendingDeleteBrand = brand;
         _deleteDialogVisible = true;
     }
 
@@ -268,20 +267,18 @@
     {
         _deleteDialogVisible = false;
         _brandToDelete = null;
-        _pendingDeleteBrand = null;
     }
 
     private async Task DeleteBrand()
     {
-        if (_pendingDeleteBrand != null)
+        if (_brandToDelete != null)
         {
             try
             {
                 _loading = true;
-                await BrandService.DeleteBrandAsync(_pendingDeleteBrand.Id);
+                await BrandService.DeleteBrandAsync(_brandToDelete.Id);
                 _deleteDialogVisible = false;
                 _brandToDelete = null;
-                _pendingDeleteBrand = null;
                 await _table.ReloadServerData();
                 Snackbar.Add("Brand deleted successfully", Severity.Success);
             }

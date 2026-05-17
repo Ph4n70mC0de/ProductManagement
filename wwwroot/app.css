@@ -6,6 +6,11 @@ a, .btn-link {
     color: #006bb7;
 }
 
+.login-layout {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e7f1 100%);
+}
+
 .btn-primary {
     color: #fff;
     background-color: #1b6ec2;

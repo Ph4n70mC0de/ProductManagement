@@ -1,6 +1,5 @@
 @page "/barcodes"
 @attribute [Authorize]
-@implements IDisposable
 @inject IProductService ProductService
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
@@ -8,6 +7,7 @@
 @using ProductManagement.Features.Data
 @using ProductManagement.Features.Data.Model
 @using ProductManagement.Features.Helpers
+@using System.Collections.Concurrent
 
 <PageTitle>Barcode Generator</PageTitle>
 
@@ -34,7 +34,7 @@
             <MudText Typo="Typo.h6" GutterBottom="true">Barcode for @_selectedProduct.SKU</MudText>
             <MudDivider Class="mb-4" />
             <div Style="text-align: center;">
-                <img src="@GetBarcodeDataUrl(_selectedProduct.SKU)" alt="Barcode for @_selectedProduct.SKU" Style="max-width: 100%; height: auto;" />
+                <img src="@GetBarcodeDataUrl(_selectedProduct.SKU)" alt="Barcode for @_selectedProduct.Name (@_selectedProduct.SKU)" Style="max-width: 100%; height: auto;" />
                 <MudText Typo="Typo.caption" Color="Color.Default" Class="mt-2">@_selectedProduct.SKU</MudText>
             </div>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="PrintBarcode" Class="mt-4">
@@ -45,33 +45,33 @@
 
     <MudPaper Elevation="2" Class="pa-4">
         <MudText Typo="Typo.h6" GutterBottom="true">Printable Product Labels</MudText>
-        <MudTable T="Product" ServerData="LoadServerData" Dense="true" Breakpoint="Breakpoint.Sm">
+        <MudTable T="Product" ServerData="LoadServerData" Dense="true" Breakpoint="Breakpoint.Sm" @ref="_table">
             <HeaderContent>
                 <MudTh>Product</MudTh>
                 <MudTh>SKU</MudTh>
                 <MudTh>Barcode</MudTh>
                 <MudTh>Action</MudTh>
             </HeaderContent>
-            <RowTemplate>
-                @if (_loading)
-                {
-                    <MudTd><MudSkeleton Width="70%" Height="20px" /></MudTd>
-                    <MudTd><MudSkeleton Width="50%" Height="20px" /></MudTd>
-                    <MudTd><MudSkeleton Width="100px" Height="24px" /></MudTd>
-                    <MudTd><MudSkeleton Width="60px" Height="36px" /></MudTd>
-                }
-                else
-                {
-                    <MudTd DataLabel="Product" @onclick="() => SelectProduct(context)" Style="cursor:pointer">@context.Name</MudTd>
-                    <MudTd DataLabel="SKU">@context.SKU</MudTd>
-                    <MudTd DataLabel="Barcode">
-                        <img src="@GetBarcodeDataUrl(context.SKU)" alt="Barcode for @context.SKU" Style="height: 40px;" />
-                    </MudTd>
-                    <MudTd DataLabel="Action">
-                        <MudButton Size="Size.Small" OnClick="() => PrintSingleBarcode(context)">Print</MudButton>
-                    </MudTd>
-                }
-            </RowTemplate>
+<RowTemplate Context="context">
+        @if (_loading)
+        {
+            <MudTd><MudSkeleton Width="70%" Height="20px" /></MudTd>
+            <MudTd><MudSkeleton Width="50%" Height="20px" /></MudTd>
+            <MudTd><MudSkeleton Width="100px" Height="24px" /></MudTd>
+            <MudTd><MudSkeleton Width="60px" Height="36px" /></MudTd>
+        }
+        else
+        {
+            <MudTd DataLabel="Product" @onclick="() => SelectProduct(context)" @onkeyup="@(e => OnProductKeyUp(e, context))" Style="cursor:pointer" tabindex="0">@context.Name</MudTd>
+            <MudTd DataLabel="SKU">@context.SKU</MudTd>
+            <MudTd DataLabel="Barcode">
+                <img src="@GetBarcodeDataUrl(context.SKU)" alt="Barcode for @context.Name (@context.SKU)" Style="height: 40px;" />
+            </MudTd>
+            <MudTd DataLabel="Action">
+                <MudButton Size="Size.Small" OnClick="() => PrintSingleBarcode(context)">Print</MudButton>
+            </MudTd>
+        }
+    </RowTemplate>
             <PagerContent>
                 <MudTablePager />
             </PagerContent>
@@ -83,9 +83,12 @@
     private int _selectedProductId = 0;
     private bool _loading;
     private string _searchString = "";
-    private MudTable<Product> _table = null!;
+    private MudTable<Product>? _table;
     private Product? _cachedSelectedProduct;
-    private readonly Dictionary<string, string> _barcodeCache = new();
+    private readonly ConcurrentDictionary<string, (string dataUrl, DateTime lastAccess)> _barcodeCache = new();
+    private readonly object _cacheLock = new();
+    private DateTime _lastValidatedTime = DateTime.MinValue;
+    private readonly TimeSpan _validationCacheDuration = TimeSpan.FromMinutes(1);
     private const int MaxCacheSize = 100;
 
     private Product? _selectedProduct => _cachedSelectedProduct;
@@ -122,6 +125,11 @@
         if (_cachedSelectedProduct == null || _selectedProductId == 0)
             return null;
 
+        if (DateTime.UtcNow - _lastValidatedTime < _validationCacheDuration && _cachedSelectedProduct?.Id == _selectedProductId)
+        {
+            return _cachedSelectedProduct;
+        }
+
         var freshProduct = await ProductService.GetProductByIdAsync(_selectedProductId);
         if (freshProduct == null)
         {
@@ -137,24 +145,39 @@
             StateHasChanged();
         }
 
+        _lastValidatedTime = DateTime.UtcNow;
         return freshProduct;
     }
 
     private string GetBarcodeDataUrl(string sku)
     {
-        if (_barcodeCache.TryGetValue(sku, out var cachedUrl))
+        var now = DateTime.UtcNow;
+        if (_barcodeCache.TryGetValue(sku, out var cached))
         {
-            return cachedUrl;
+            _barcodeCache.TryUpdate(sku, (cached.dataUrl, now), cached);
+            return cached.dataUrl;
         }
 
         if (_barcodeCache.Count >= MaxCacheSize)
         {
-            var firstKey = _barcodeCache.Keys.First();
-            _barcodeCache.Remove(firstKey);
+            lock (_cacheLock)
+            {
+                if (_barcodeCache.Count >= MaxCacheSize)
+                {
+                    var lruEntry = _barcodeCache
+                        .OrderBy(kvp => kvp.Value.lastAccess)
+                        .FirstOrDefault();
+                    
+                    if (!string.IsNullOrEmpty(lruEntry.Key))
+                    {
+                        _barcodeCache.TryRemove(lruEntry.Key, out _);
+                    }
+                }
+            }
         }
 
         var dataUrl = BarcodeHelper.GenerateBarcodeDataUrl(sku);
-        _barcodeCache[sku] = dataUrl;
+        _barcodeCache.TryAdd(sku, (dataUrl, now));
         return dataUrl;
     }
 
@@ -202,7 +225,10 @@
             _cachedSelectedProduct = null;
             _selectedProductId = 0;
             _barcodeCache.Clear();
-            await _table.ReloadServerData();
+            if (_table != null)
+            {
+                await _table.ReloadServerData();
+            }
         }
     }
 
@@ -212,8 +238,11 @@
         _selectedProductId = product.Id;
     }
 
-    public void Dispose()
+    private void OnProductKeyUp(KeyboardEventArgs e, Product product)
     {
-        _barcodeCache.Clear();
+        if (e.Key == "Enter" || e.Key == " ")
+        {
+            SelectProduct(product);
+        }
     }
 }

@@ -19,6 +19,9 @@ builder.Services.AddScoped<AppAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<AppAuthenticationStateProvider>());
 builder.Services.AddCascadingAuthenticationState();
 
+// Add authentication core services (minimal for Blazor Server with custom auth state provider)
+builder.Services.AddAuthenticationCore();
+
 //Connection string for the database, you can change it to your own connection string in appsettings.json file
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -67,8 +70,11 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
 
 app.UseAntiforgery();
 
