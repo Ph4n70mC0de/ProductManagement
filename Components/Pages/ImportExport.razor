@@ -186,12 +186,12 @@
             _loading = true;
             var file = e.File;
             
-            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                HeaderValidated = null,
-                MissingFieldFound = null,
-                TrimOptions = TrimOptions.Trim
-            };
+var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+             {
+                 HeaderValidated = null!,
+                 MissingFieldFound = null!,
+                 TrimOptions = TrimOptions.Trim
+             };
             
             using var reader = new StreamReader(file.OpenReadStream(1024 * 1024));
             using var csv = new CsvReader(reader, config);

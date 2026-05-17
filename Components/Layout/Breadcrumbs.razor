@@ -14,7 +14,7 @@
 
     private string[] GetExcludedPaths() => ExcludedPaths ?? new[] { "login", "not-found" };
 
-    private void OnLocationChanged(object sender, LocationChangedEventArgs e) => BuildBreadcrumbs();
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => BuildBreadcrumbs();
 
     protected override void OnInitialized()
     {

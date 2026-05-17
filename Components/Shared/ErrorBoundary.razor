@@ -9,16 +9,6 @@
             An unexpected error occurred while processing your request.
         </MudText>
         
-        @if (!string.IsNullOrEmpty(CurrentException?.Message))
-        {
-            <MudPaper Elevation="1" Class="pa-4 mb-4" Style="background-color: var(--mud-palette-gray-lighter); text-align: left;">
-                <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-2">Error Details:</MudText>
-                <MudText Typo="Typo.body2" Style="word-break: break-word; font-family: monospace; font-size: 0.8rem;">
-                    @CurrentException?.Message
-                </MudText>
-            </MudPaper>
-        }
-        
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Recover" Class="mr-2">Try Again</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Default" OnClick="GoHome">Go Home</MudButton>
     </MudPaper>

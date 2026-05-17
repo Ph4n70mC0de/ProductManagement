@@ -21,7 +21,6 @@ public static class SeedData
             new Role { Name = "Staff", Description = "View and basic operations", IsActive = true, CreatedAt = DateTime.UtcNow }
         };
         context.Roles.AddRange(roles);
-        context.SaveChanges();
 
         var brands = new[]
         {
@@ -31,16 +30,6 @@ public static class SeedData
             new Brand { Name = "Sony", Description = "Entertainment and electronics", IsActive = true, CreatedAt = DateTime.UtcNow }
         };
         context.Brands.AddRange(brands);
-
-        var categories = new[]
-        {
-            new Category { Name = "Electronics", Description = "Electronic devices and accessories", IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Category { Name = "Clothing", Description = "Apparel and fashion items", IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Category { Name = "Computers", Description = "Desktops, laptops and accessories", IsActive = true, CreatedAt = DateTime.UtcNow, ParentCategoryId = 1 },
-            new Category { Name = "Smartphones", Description = "Mobile phones and accessories", IsActive = true, CreatedAt = DateTime.UtcNow, ParentCategoryId = 1 },
-            new Category { Name = "Shoes", Description = "Athletic and casual footwear", IsActive = true, CreatedAt = DateTime.UtcNow, ParentCategoryId = 2 }
-        };
-        context.Categories.AddRange(categories);
 
         var suppliers = new[]
         {
@@ -52,12 +41,29 @@ public static class SeedData
 
         context.SaveChanges();
 
+        // Parent categories (no ParentCategoryId)
+        var electronics = new Category { Name = "Electronics", Description = "Electronic devices and accessories", IsActive = true, CreatedAt = DateTime.UtcNow };
+        var clothing = new Category { Name = "Clothing", Description = "Apparel and fashion items", IsActive = true, CreatedAt = DateTime.UtcNow };
+        context.Categories.AddRange(electronics, clothing);
+        context.SaveChanges();
+
+        // Child categories (with ParentCategoryId)
+        var categories = new[]
+        {
+            new Category { Name = "Computers", Description = "Desktops, laptops and accessories", IsActive = true, CreatedAt = DateTime.UtcNow, ParentCategoryId = electronics.Id },
+            new Category { Name = "Smartphones", Description = "Mobile phones and accessories", IsActive = true, CreatedAt = DateTime.UtcNow, ParentCategoryId = electronics.Id },
+            new Category { Name = "Shoes", Description = "Athletic and casual footwear", IsActive = true, CreatedAt = DateTime.UtcNow, ParentCategoryId = clothing.Id }
+        };
+        context.Categories.AddRange(categories);
+
+        context.SaveChanges();
+
         var products = new[]
         {
-            new Product { Name = "iPhone 15 Pro", Description = "Latest iPhone model", SKU = "APL-PHN-001", Price = 999.99m, Cost = 750.00m, Quantity = 50, BrandId = 1, CategoryId = 4, SupplierId = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Product { Name = "MacBook Air M2", Description = "13-inch laptop", SKU = "APL-COM-001", Price = 1299.99m, Cost = 900.00m, Quantity = 30, BrandId = 1, CategoryId = 3, SupplierId = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Product { Name = "Galaxy S24", Description = "Android smartphone", SKU = "SAM-PHN-001", Price = 899.99m, Cost = 650.00m, Quantity = 45, BrandId = 2, CategoryId = 4, SupplierId = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Product { Name = "Air Max 270", Description = "Running shoes", SKU = "NIK-SHO-001", Price = 150.00m, Cost = 80.00m, Quantity = 100, BrandId = 3, CategoryId = 5, SupplierId = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new Product { Name = "iPhone 15 Pro", Description = "Latest iPhone model", SKU = "APL-PHN-001", Price = 999.99m, Cost = 750.00m, Quantity = 50, BrandId = 1, CategoryId = categories[1].Id, SupplierId = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new Product { Name = "MacBook Air M2", Description = "13-inch laptop", SKU = "APL-COM-001", Price = 1299.99m, Cost = 900.00m, Quantity = 30, BrandId = 1, CategoryId = categories[0].Id, SupplierId = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new Product { Name = "Galaxy S24", Description = "Android smartphone", SKU = "SAM-PHN-001", Price = 899.99m, Cost = 650.00m, Quantity = 45, BrandId = 2, CategoryId = categories[1].Id, SupplierId = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
+            new Product { Name = "Air Max 270", Description = "Running shoes", SKU = "NIK-SHO-001", Price = 150.00m, Cost = 80.00m, Quantity = 100, BrandId = 3, CategoryId = categories[2].Id, SupplierId = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
             new Product { Name = "WH-1000XM5", Description = "Wireless headphones", SKU = "SON-AUD-001", Price = 399.99m, Cost = 250.00m, Quantity = 60, BrandId = 4, CategoryId = 1, SupplierId = 3, IsActive = true, CreatedAt = DateTime.UtcNow }
         };
         context.Products.AddRange(products);

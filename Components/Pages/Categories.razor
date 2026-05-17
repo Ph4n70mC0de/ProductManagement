@@ -14,7 +14,7 @@
     
     <MudPaper Class="pa-4 mb-4">
         <MudTextField @bind-Value="_searchString" Placeholder="Search by name or description" 
-                      AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" adornmentclick="OnSearchClick"
+                      AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" OnAdornmentClick="OnSearchClick"
                       Immediate="true" IconSize="Size.Medium" Class="mt-0"
                       OnKeyUp="OnSearchKeyUp"></MudTextField>
     </MudPaper>
@@ -71,7 +71,6 @@
         <MudTextField @bind-Value="_newCategory.Name" Label="Name" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
         <MudTextField @bind-Value="_newCategory.Description" Label="Description" Lines="3" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
         <MudSelect @bind-Value="_newCategory.ParentCategoryId" Label="Parent Category" Clearable="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3">
-            <MudSelectItem Value="0" Disabled="true">None (Root Category)</MudSelectItem>
             @foreach (var category in RootCategories)
             {
                 <MudSelectItem Value="category.Id">@category.Name</MudSelectItem>
@@ -93,7 +92,6 @@
         <MudTextField @bind-Value="_editingCategory.Name" Label="Name" Required="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
         <MudTextField @bind-Value="_editingCategory.Description" Label="Description" Lines="3" Variant="Variant.Outlined" Immediate="true" Class="mb-3" />
         <MudSelect @bind-Value="_editingCategory.ParentCategoryId" Label="Parent Category" Clearable="true" Variant="Variant.Outlined" Immediate="true" Class="mb-3">
-            <MudSelectItem Value="0">None (Root Category)</MudSelectItem>
             @foreach (var category in RootCategories.Where(c => c.Id != _editingCategory.Id))
             {
                 <MudSelectItem Value="category.Id">@category.Name</MudSelectItem>
@@ -211,8 +209,6 @@
         try
         {
             _loading = true;
-            if (_newCategory.ParentCategoryId == 0)
-                _newCategory.ParentCategoryId = null;
             await CategoryService.CreateCategoryAsync(_newCategory);
             _createDialogVisible = false;
             await _table.ReloadServerData();
@@ -245,8 +241,6 @@
         try
         {
             _loading = true;
-            if (_editingCategory.ParentCategoryId == 0)
-                _editingCategory.ParentCategoryId = null;
             await CategoryService.UpdateCategoryAsync(_editingCategory);
             _editDialogVisible = false;
             await _table.ReloadServerData();

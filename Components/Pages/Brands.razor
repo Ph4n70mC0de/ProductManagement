@@ -120,13 +120,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-        }
     }
 
     private async Task<TableData<Brand>> LoadServerData(TableState state, CancellationToken cancellationToken)

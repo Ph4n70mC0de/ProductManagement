@@ -7,6 +7,7 @@ using ProductManagement.Features.Services.Implementations;
 using ProductManagement.Features.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,19 +16,27 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMudServices();
 
 //Authentication
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+    {
+        options.LoginPath = "/login";
+    });
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AppAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<AppAuthenticationStateProvider>());
 builder.Services.AddCascadingAuthenticationState();
 
-// Add authentication core services (minimal for Blazor Server with custom auth state provider)
-builder.Services.AddAuthenticationCore();
 
-//Connection string for the database, you can change it to your own connection string in appsettings.json file
+var connectionString = builder.Configuration.GetConnectionString("ProductManagement");
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("Connection string 'ProductManagement' is not configured.");
+}
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(
-        builder.Configuration.GetConnectionString("ProductManagement"),
-        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("ProductManagement"))
+        connectionString,
+        ServerVersion.AutoDetect(connectionString)
         ));
 
 // Add services to the container.
@@ -52,7 +61,7 @@ builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IDataExportService, DataExportService>();
-builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<ProductManagement.Features.Services.Interfaces.IAuthenticationService, ProductManagement.Features.Services.Implementations.AuthenticationService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 
 var app = builder.Build();
@@ -73,8 +82,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
-
 app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAntiforgery();
 

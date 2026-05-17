@@ -6,7 +6,7 @@ namespace ProductManagement.Features.Data.Model
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string SKU { get; set; } = string.Empty;
-        public string? Barcode { get; set; }
+        public string Barcode { get; set; } = string.Empty;
         public int ReorderLevel { get; set; } = 0;
         public string? ImageUrl { get; set; }
         public decimal Price { get; set; }

@@ -19,10 +19,10 @@
     <MudPaper Class="pa-4 mb-4">
         <MudGrid>
             <MudItem xs="12" sm="6" md="4">
-                <MudTextField @bind-Value="_searchString" Placeholder="Search by username or email" 
-                              AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" adornmentclick="OnSearchClick"
-                              Immediate="true" IconSize="Size.Medium" Class="mt-0"
-                              OnKeyUp="OnSearchKeyUp"></MudTextField>
+<MudTextField @bind-Value="_searchString" Placeholder="Search by username or email" 
+                          AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" OnAdornmentClick="OnSearchClick"
+                          Immediate="true" IconSize="Size.Medium" Class="mt-0"
+                          OnKeyUp="OnSearchKeyUp"></MudTextField>
             </MudItem>
             <MudItem xs="12" sm="6" md="4">
                 <MudSelect @bind-Value="_statusFilter" Label="Filter by Status" Clearable="true" Variant="Variant.Outlined" Immediate="true"

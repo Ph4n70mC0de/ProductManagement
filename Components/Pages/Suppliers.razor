@@ -14,7 +14,7 @@
     
     <MudPaper Class="pa-4 mb-4">
         <MudTextField @bind-Value="_searchString" Placeholder="Search by name, email, contact person" 
-                      AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" adornmentclick="OnSearchClick"
+                      AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.Start" OnAdornmentClick="OnSearchClick"
                       Immediate="true" IconSize="Size.Medium" Class="mt-0"
                       OnKeyUp="OnSearchKeyUp"></MudTextField>
     </MudPaper>
@@ -117,7 +117,6 @@
 </MudDialog>
 
 @code {
-    private IEnumerable<Role> RolesList = new List<Role>();
     private bool _loading;
     
     private string _searchString = "";

@@ -11,18 +11,18 @@
         <MudText Typo="Typo.h6" GutterBottom="true" Align="Align.Center">Sign In</MudText>
         
         <MudForm @ref="form" @bind-IsValid="@isValid">
-            <MudTextField @bind-Value="username" Label="Username" Required="true" Variant="Variant.Outlined" Class="mt-4" />
-            <MudTextField @bind-Value="password" Label="Password" InputType="InputType.Password" Required="true" Variant="Variant.Outlined" Class="mt-4" MinLength="6" />
+            <MudTextField @bind-Value="username" Label="Username" Required="true" Variant="Variant.Outlined" Class="mt-4" autocomplete="username" />
+            <MudTextField @bind-Value="password" Label="Password" InputType="InputType.Password" Required="true" Variant="Variant.Outlined" Class="mt-4" autocomplete="current-password" />
             
             @if (!string.IsNullOrEmpty(errorMessage))
             {
-                <MudAlert Severity="Severity.Error" Class="mt-4">@errorMessage</MudAlert>
+                <MudAlert Severity="Severity.Error" Class="mt-4" aria-live="polite" role="alert">@errorMessage</MudAlert>
             }
             
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-6" OnClick="HandleLogin" Disabled="!isValid || isLoading" aria-label="@(isLoading ? "Logging in" : "Login")">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-6" OnClick="HandleLogin" Disabled="!isValid || isLoading" aria-label="@(isLoading ? "Logging in" : "Login")" aria-busy="@isLoading">
                 @if (isLoading)
                 {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" aria-label="Logging in" />
                 }
                 else
                 {
