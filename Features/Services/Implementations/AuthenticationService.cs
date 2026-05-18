@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http;
 using ProductManagement.Features.Data;
 using ProductManagement.Features.Data.Model;
 using ProductManagement.Features.Services.Interfaces;
@@ -17,7 +18,7 @@ namespace ProductManagement.Features.Services.Implementations
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         public AuthenticationService(
-            AppDbContext context, 
+            AppDbContext context,
             ILogger<AuthenticationService> logger,
             AppAuthenticationStateProvider authStateProvider,
             IHttpContextAccessor httpContextAccessor)
@@ -50,8 +51,6 @@ namespace ProductManagement.Features.Services.Implementations
                 user.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
 
-                await _authStateProvider.MarkUserAsAuthenticated(user);
-
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -61,15 +60,25 @@ namespace ProductManagement.Features.Services.Implementations
                 };
 
                 var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                var authProperties = new AuthenticationProperties();
+                var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
-                if (_httpContextAccessor.HttpContext != null)
-                {
-                    await _httpContextAccessor.HttpContext.SignInAsync(
-                        CookieAuthenticationDefaults.AuthenticationScheme,
-                        new ClaimsPrincipal(claimsIdentity),
-                        authProperties);
-                }
+                await _authStateProvider.MarkUserAsAuthenticated(user);
+
+                 if (_httpContextAccessor.HttpContext != null)
+                 {
+                     var httpContext = _httpContextAccessor.HttpContext;
+                     if (!httpContext.Response.HasStarted)
+                     {
+                         await httpContext.SignInAsync(
+                             CookieAuthenticationDefaults.AuthenticationScheme,
+                             claimsPrincipal);
+                     }
+                     else
+                     {
+                         _logger.LogWarning("Cannot sign in user {Username} because the response has already started.", username);
+                         return new AuthenticationResult { Success = false, ErrorMessage = "Cannot complete login because the response has already started." };
+                     }
+                 }
 
                 return new AuthenticationResult { Success = true, User = user };
             }
@@ -80,13 +89,23 @@ namespace ProductManagement.Features.Services.Implementations
             }
         }
 
-        public async Task LogoutAsync()
-        {
-            await _authStateProvider.MarkUserAsLoggedOut();
-            if (_httpContextAccessor.HttpContext != null)
-            {
-                await _httpContextAccessor.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            }
-        }
+         public async Task LogoutAsync()
+         {
+             await _authStateProvider.MarkUserAsLoggedOut();
+
+             if (_httpContextAccessor.HttpContext != null)
+             {
+                 var httpContext = _httpContextAccessor.HttpContext;
+                 if (!httpContext.Response.HasStarted)
+                 {
+                     await httpContext.SignOutAsync(
+                         CookieAuthenticationDefaults.AuthenticationScheme);
+                 }
+                 else
+                 {
+                     _logger.LogWarning("Cannot sign out user because the response has already started.");
+                 }
+             }
+         }
     }
 }
