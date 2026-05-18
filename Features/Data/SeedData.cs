@@ -71,8 +71,8 @@ public static class SeedData
         var adminUser = new User
         {
             Username = "admin",
-            Email = "admin@productmanagement.com",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
+            Email = "admin@gmail.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123"),
             RoleId = 1,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
