@@ -67,8 +67,7 @@
 
         if (result.Success)
         {
-            Snackbar.Add("Login successful!", Severity.Success);
-            NavigationManager.NavigateTo("/", forceLoad: true);
+            NavigationManager.NavigateTo("/");
         }
         else
         {
