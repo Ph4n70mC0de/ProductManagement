@@ -2,6 +2,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IAuthenticationService AuthenticationService
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 
 <MudThemeProvider @bind-IsDarkMode="_isDarkMode" Theme="_theme" />
 <MudPopoverProvider />
@@ -10,19 +11,23 @@
 
 <MudLayout>
     <MudAppBar Elevation="1">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+<MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                       aria-label="Toggle navigation menu"
                        OnClick="@((e) => DrawerToggle())" />
         <MudText Typo="Typo.h6" Class="ml-2">Product Management</MudText>
         <MudSpacer />
         
         <MudTooltip Text="@(_isDarkMode ? "Light Mode" : "Dark Mode")">
             <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" 
-                          Color="Color.Inherit" OnClick="ToggleDarkMode" />
+                          Color="Color.Inherit" 
+                          aria-label="Toggle dark mode"
+                          OnClick="ToggleDarkMode" />
         </MudTooltip>
         
         <AuthorizeView>
             <Authorized>
-                <MudMenu Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Inherit" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                <MudMenu Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Inherit" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                         aria-label="User account menu">
                     <MudText Typo="Typo.body1" Class="px-4 py-2">@context.User.Identity?.Name</MudText>
                     <MudDivider />
                     <MudMenuItem OnClick="Logout">Logout</MudMenuItem>
@@ -44,9 +49,18 @@
              <AuthorizeView>
                  <Breadcrumbs />
              </AuthorizeView>
-             <ErrorBoundary>
-                 @Body
-             </ErrorBoundary>
+<ErrorBoundary>
+                  <ChildContent>
+                      @Body
+                  </ChildContent>
+                  <ErrorContent>
+                      <MudAlert Severity="Severity.Error" Class="ma-4">
+                          <MudText Typo="Typo.h6">Something went wrong</MudText>
+                          <MudText>Please try refreshing the page. If the problem persists, contact support.</MudText>
+                          <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshPage" Class="mt-2">Refresh Page</MudButton>
+                      </MudAlert>
+                  </ErrorContent>
+              </ErrorBoundary>
          </MudContainer>
      </MudMainContent>
 </MudLayout>
@@ -56,19 +70,49 @@
     private bool _isDarkMode = false;
     private readonly MudTheme _theme = new MudTheme();
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var storedDarkMode = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "isDarkMode");
+            if (bool.TryParse(storedDarkMode, out var isDark))
+            {
+                _isDarkMode = isDark;
+                await JSRuntime.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('color-scheme', '{(_isDarkMode ? "dark" : "light")}');");
+            }
+
+            var storedDrawer = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "drawerOpen");
+            if (bool.TryParse(storedDrawer, out var drawerOpen))
+            {
+                _drawerOpen = drawerOpen;
+            }
+
+            StateHasChanged();
+        }
+    }
+
     void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
+        _ = JSRuntime.InvokeVoidAsync("localStorage.setItem", "drawerOpen", _drawerOpen);
     }
 
-    void ToggleDarkMode()
+    async Task ToggleDarkMode()
     {
         _isDarkMode = !_isDarkMode;
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "isDarkMode", _isDarkMode);
+        await JSRuntime.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('color-scheme', '{(_isDarkMode ? "dark" : "light")}');");
+        await JSRuntime.InvokeVoidAsync("eval", $"document.getElementById('theme-color-meta')?.setAttribute('content', '{(_isDarkMode ? "#121212" : "#f5f5f5")}');");
     }
 
     private async Task Logout()
     {
         await AuthenticationService.LogoutAsync();
         NavigationManager.NavigateTo("/login");
+    }
+
+    private void RefreshPage()
+    {
+        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
     }
 }
