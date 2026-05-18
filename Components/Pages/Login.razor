@@ -1,4 +1,5 @@
 @page "/login"
+@layout LoginLayout
 @inject IAuthenticationService AuthenticationService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -12,7 +13,7 @@
         
         <MudForm @ref="form" @bind-IsValid="@isValid">
             <MudTextField @bind-Value="username" Label="Username" Required="true" Variant="Variant.Outlined" Class="mt-4" autocomplete="username" />
-            <MudTextField @bind-Value="password" Label="Password" InputType="InputType.Password" Required="true" Variant="Variant.Outlined" Class="mt-4" autocomplete="current-password" />
+            <MudTextField @bind-Value="password" Label="Password" InputType="@passwordInputType" Required="true" Variant="Variant.Outlined" Class="mt-4" autocomplete="current-password" Adornment="Adornment.End" AdornmentIcon="@passwordIcon" OnAdornmentClick="TogglePasswordVisibility" />
             
             @if (!string.IsNullOrEmpty(errorMessage))
             {
@@ -40,6 +41,16 @@
     private string username = string.Empty;
     private string password = string.Empty;
     private string errorMessage = string.Empty;
+    private bool isPasswordVisible;
+    private InputType passwordInputType = InputType.Password;
+    private string passwordIcon = Icons.Material.Filled.Visibility;
+
+    private void TogglePasswordVisibility()
+    {
+        isPasswordVisible = !isPasswordVisible;
+        passwordInputType = isPasswordVisible ? InputType.Text : InputType.Password;
+        passwordIcon = isPasswordVisible ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility;
+    }
 
     private async Task HandleLogin()
     {
@@ -57,7 +68,7 @@
         if (result.Success)
         {
             Snackbar.Add("Login successful!", Severity.Success);
-            NavigationManager.NavigateTo("/");
+            NavigationManager.NavigateTo("/", forceLoad: true);
         }
         else
         {
