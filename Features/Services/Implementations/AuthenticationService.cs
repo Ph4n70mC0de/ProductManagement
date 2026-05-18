@@ -29,7 +29,7 @@ namespace ProductManagement.Features.Services.Implementations
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<AuthenticationResult> LoginAsync(string username, string password)
+public async Task<AuthenticationResult> LoginAsync(string username, string password)
         {
             try
             {
@@ -64,21 +64,19 @@ namespace ProductManagement.Features.Services.Implementations
 
                 await _authStateProvider.MarkUserAsAuthenticated(user);
 
-                 if (_httpContextAccessor.HttpContext != null)
-                 {
-                     var httpContext = _httpContextAccessor.HttpContext;
-                     if (!httpContext.Response.HasStarted)
-                     {
-                         await httpContext.SignInAsync(
-                             CookieAuthenticationDefaults.AuthenticationScheme,
-                             claimsPrincipal);
-                     }
-                     else
-                     {
-                         _logger.LogWarning("Cannot sign in user {Username} because the response has already started.", username);
-                         return new AuthenticationResult { Success = false, ErrorMessage = "Cannot complete login because the response has already started." };
-                     }
-                 }
+                if (_httpContextAccessor.HttpContext != null)
+                {
+                    try
+                    {
+                        await _httpContextAccessor.HttpContext.SignInAsync(
+                            CookieAuthenticationDefaults.AuthenticationScheme,
+                            claimsPrincipal);
+                    }
+                    catch (InvalidOperationException ex) when (ex.Message.Contains("response"))
+                    {
+                        _logger.LogWarning("Cookie sign-in skipped for user {Username}: {Message}", username, ex.Message);
+                    }
+                }
 
                 return new AuthenticationResult { Success = true, User = user };
             }
@@ -89,23 +87,22 @@ namespace ProductManagement.Features.Services.Implementations
             }
         }
 
-         public async Task LogoutAsync()
-         {
-             await _authStateProvider.MarkUserAsLoggedOut();
+public async Task LogoutAsync()
+        {
+            await _authStateProvider.MarkUserAsLoggedOut();
 
-             if (_httpContextAccessor.HttpContext != null)
-             {
-                 var httpContext = _httpContextAccessor.HttpContext;
-                 if (!httpContext.Response.HasStarted)
-                 {
-                     await httpContext.SignOutAsync(
-                         CookieAuthenticationDefaults.AuthenticationScheme);
-                 }
-                 else
-                 {
-                     _logger.LogWarning("Cannot sign out user because the response has already started.");
-                 }
-             }
-         }
+            if (_httpContextAccessor.HttpContext != null)
+            {
+                try
+                {
+                    await _httpContextAccessor.HttpContext.SignOutAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme);
+                }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("response"))
+                {
+                    _logger.LogWarning("Cookie sign-out skipped: {Message}", ex.Message);
+                }
+            }
+        }
     }
 }
